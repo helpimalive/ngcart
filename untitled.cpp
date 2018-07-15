@@ -78,10 +78,10 @@ NumericVector test_split(double value, NumericVector feature){
 
   for (int i=0; i<feature_length; i++){
     if(feature[i]<value){
-      grouping.push_back(1);
+      grouping.push_back(0);
     }
     else{
-      grouping.push_back(0);
+      grouping.push_back(1);
     }
   }
 
@@ -105,7 +105,7 @@ List get_split(NumericMatrix m){
         std::cout<<gini<<" "<<row<<" "<<m(row,col)<<std::endl;
         std::cout<<grouping<<std::endl;
         if(gini<b_score){
-          b_index = row;
+          b_index = col;
           b_value = m(row,col);
           b_score = gini;
           b_groups = grouping;
