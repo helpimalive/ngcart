@@ -45,11 +45,31 @@ f<-function(h){
 	return(theta_vec)
 }
 
+probs<-matrix(c(0.25,0.75),nrow=1,ncol=2)
+
+update_probs<-function(theta_vec,probs){
+	# function takes as arguments: 
+	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
+	# an 1 by k length matrix of probabilities
+	# function returns: 
+	# an m+1 by 1 matrix of softmax processed probabilities of p(y= l|j)
+	new_probs = t(probs) %*% theta_vec
+
+	for(col in (1:ncol(new_probs))) {
+		denominator<-do.call(sum,lapply(new_probs[,col],exp))
+		cat(col)
+		for(row in (1:nrow(new_probs))) {
+			new_probs[row,col]<-exp(new_probs[row,col])/denominator
+		}
+	}
+}
+
+
 tau = 10
 batch = 3
 # for t in seq(0,tau)
 h = sgn(W,X,sample(1:nrow(X),1))
-
+THETA = 
 
 def f(base_class,h):
 # tree navigation function f :# Hm → Im+1 that maps an m-bit sequence of split decisions (Hm ≡ {−1, +1}
