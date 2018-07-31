@@ -45,38 +45,63 @@ f<-function(h){
 	return(theta_vec)
 }
 
-probs<-matrix(c(0.25,0.75),nrow=1,ncol=2)
-
+probs<-matrix(c(0.00,1),nrow=1,ncol=2)
+theta_vec<-c(0,0,0,1)
 update_probs<-function(theta_vec,probs){
 	# function takes as arguments: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
 	# an 1 by k length matrix of probabilities
 	# function returns: 
-	# an m+1 by 1 matrix of softmax processed probabilities of p(y= l|j)
-	new_probs = t(probs) %*% theta_vec
-
-	for(col in (1:ncol(new_probs))) {
-		denominator<-do.call(sum,lapply(new_probs[,col],exp))
-		cat(col)
-		for(row in (1:nrow(new_probs))) {
-			new_probs[row,col]<-exp(new_probs[row,col])/denominator
-		}
-	}
+	# an m+1 by 1 matrix of softmax processed probabilities of p(y= l|j)	
+	denominator<-do.call(sum,lapply(probs,exp))
+	new_probs<-matrix(unlist(lapply(probs, function(x) exp(x)/denominator)))
+	new_probs = new_probs %*% t(matrix(unlist(theta_vec)))
+	new_probs = new_probs[,grep(1,theta_vec)]
+	return(new_probs)
 }
 
 
+loss<-function(X,row,update_probs){
+	# function takes as arguments: 
+	# the dataset and row being evaluated
+	# predicted probabilities from the update_probs softmax
+	# function returns: 
+	# log loss value
+	true_base = as.numeric(X[row,ncol(X)])
+	log_loss = -true_base + log(sum(exp(update_probs)))
+	return(log_loss)
+}
+
+
+objective<-function(W,row,X,theta_vec){
+	# this is the surrogate objective function
+	# function takes as arguments: 
+	# Weights (W)
+	# row being tested (row)
+	# dataset (X)
+	# theta vector
+	# function returns the argument (g) that maximize the expression: 
+
+
+	library(gtools)
+	gs <-permutations(2,3,c(-1,1),repeats.allowed=T)
+	for(row in c(1:nrow(gs))) {
+		g<-gs[row,]
+		x<-X[row,c(1:ncol(X)-1)]
+		first_term = t(g) %*% W %*% x
+		u_p <-update_probs(theta_vec,probs)
+		second_term = loss(X,row,u_p)
+		func<-first_term+second_term
+		cat(paste(row,func,"\n"))
+	}
+	return(argmax)
+}
+
 tau = 10
 batch = 3
-# for t in seq(0,tau)
-h = sgn(W,X,sample(1:nrow(X),1))
-THETA = 
+# for(t in seq(0,tau)){}
+	h = sgn(W,X,sample(1:nrow(X),1))
+	g = objective()
 
-def f(base_class,h):
-# tree navigation function f :# Hm → Im+1 that maps an m-bit sequence of split decisions (Hm ≡ {−1, +1}
-# m) to an indicator vector that specifies a 1-of-(m + 1) encoding. 
-# Such an indicator vector is only non-zero at the index of the selected leaf.
-	final_direc = list(h).pop()
-	if final_direc==-1:
-		return(base_class0))
-	else:
-		return(base_class1))
+
+
