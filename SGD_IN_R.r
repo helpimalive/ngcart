@@ -14,8 +14,6 @@ X = matrix(
 	ncol=3,
 	byrow=TRUE)
 
-W = matrix(c(0.5,0.3,0.2, 0.1,0.2,0.3),nrow=3,ncol=2)
-b_i = matrix(c(-1,-1,-1),nrow=3,ncol=1)
 
 sgn<-function(W,X,row){
 	# W is the weight matrix
@@ -45,8 +43,7 @@ f<-function(h){
 	return(theta_vec)
 }
 
-probs<-matrix(c(0.00,1),nrow=1,ncol=2)
-theta_vec<-c(0,0,0,1)
+
 update_probs<-function(theta_vec,probs){
 	# function takes as arguments: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
@@ -73,7 +70,7 @@ loss<-function(X,row,update_probs){
 }
 
 
-objective<-function(W,row,X,theta_vec){
+objective<-function(W,X,theta_vec){
 	# this is the surrogate objective function
 	# function takes as arguments: 
 	# Weights (W)
@@ -92,16 +89,30 @@ objective<-function(W,row,X,theta_vec){
 		u_p <-update_probs(theta_vec,probs)
 		second_term = loss(X,row,u_p)
 		func<-first_term+second_term
-		cat(paste(row,func,"\n"))
+		if(exists("argmax")){
+			if(func>argmax){
+				argmax<-func
+				row<-row
+			}}
+		else{
+			argmax<-func
+			}
 	}
-	return(argmax)
+	return(gs[row,])
 }
+
+probs<-matrix(c(0.00,1),nrow=1,ncol=2)
+theta_vec<-c(0,0,0,1)
+w = c(0.5,0.3,0.2)
+col = ncol(X)-1
+W = rep(w,col)
+W = matrix(W,nrow=length(w),ncol=col)
 
 tau = 10
 batch = 3
 # for(t in seq(0,tau)){}
 	h = sgn(W,X,sample(1:nrow(X),1))
-	g = objective()
+	g = objective(W,X,theta_vec)
 
 
 
