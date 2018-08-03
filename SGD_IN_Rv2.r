@@ -43,34 +43,34 @@ f<-function(h){
 	return(ID_vec)
 }
 
-PROBS are the row of THETA where H is 1
-
 update_probs<-function(theta,ID_vec){
 	# function takes as arguments: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
 	# an 1 by k length matrix of probabilities
 	# function returns: 
-	# an m+1 by 1 matrix of softmax processed probabilities of p(y= l|j)	
+	# an m+1 by k matrix of softmax processed probabilities of p(y= l|j)	
 	theta_vec<-theta[grep(1,ID_vec),]
 	denominator<-do.call(sum,lapply(theta_vec,exp))
 	new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
-	new_probs = new_probs %*% t(matrix(unlist(theta_vec)))
+	new_probs = (ID_vec) %*% t(new_probs)
 	return(new_probs)
 }
 
 
-loss<-function(X,row,update_probs){
+loss<-function(X,row,theta){
 	# function takes as arguments: 
 	# the dataset and row being evaluated
 	# predicted probabilities from the update_probs softmax
 	# function returns: 
 	# log loss value
 	true_base = as.numeric(X[row,ncol(X)])
-	log_loss = -true_base + log(sum(exp(update_probs)))
+	log_loss = -true_base + log(sum(exp(theta)))
 	return(log_loss)
 }
 
-loss_prime<-function(probs){
+loss_prime<-function(theta,h){
+	ID_vec<-f(h)
+	probs<-theta[grep(1,ID_vec),]
 	a = exp(sum(probs))/do.call(sum,lapply(probs,exp))**2
 	return(a)
 }
@@ -83,15 +83,13 @@ objective<-function(W,X,theta,h){
 	# dataset (X)
 	# theta vector
 	# function returns the argument (g) that maximize the expression: 
-
-
 	library(gtools)
 	gs <-permutations(2,3,c(-1,1),repeats.allowed=T)
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
 		x<-X[row,c(1:ncol(X)-1)]
 		first_term = t(g) %*% W %*% x
-		u_p <-update_probs(theta,h)
+		u_p <-update_probs(theta,f(h))
 		second_term = loss(X,row,u_p)
 		func<-first_term+second_term
 		if(exists("argmax")){
@@ -106,8 +104,9 @@ objective<-function(W,X,theta,h){
 	return(gs[row,])
 }
 
-probs<-matrix(c(0.00,1),nrow=1,ncol=2)
-theta_vec<-c(0,0,0,1)
+probs<-matrix(c(0.5,0.5),nrow=1,ncol=2)
+theta<-matrix(c(0,0,0,0,0,0,0.25,0.75),nrow=4,ncol=2,byrow=TRUE)
+ID_vec<-c(0,0,1,0)
 w = c(0.5,0.3,0.2)
 col = ncol(X)-1
 W = rep(w,col)
@@ -121,7 +120,7 @@ v = 2 # regularization parameter
 # for(t in seq(0,tau)){}
 samp_row <-sample(1:nrow(X),1)
 	h = sgn(W,X,samp_row)
-	g = objective(W,X,theta_vec)
+	g = objective(W,X,theta,h)
 	W_temp = W-(alpha*g%*%t(X[samp_row,0:col])+alpha*h%*%t(X[samp_row,0:col]))
 	# i'm concerned that I don't have to transpose W before multiplying here. 
 
@@ -132,7 +131,7 @@ for(i in seq(1,nrow(W_temp))) {
 
 # delta_3 <- (-(Y - Y_hat) * sigmoidprime(Z_3))
 # djdw2 <- t(A_2) %*% delta_3
-theta_vec<- theta_vec-alpha*loss_prime(probs)
+theta<- theta+alpha*loss_prime(theta,h)
 
 	
 
