@@ -69,6 +69,10 @@ loss<-function(X,row,update_probs){
 	return(log_loss)
 }
 
+loss_prime<-function(probs){
+	a = exp(sum(probs))/do.call(sum,lapply(probs,exp))**2
+	return(a)
+}
 
 objective<-function(W,X,theta_vec){
 	# this is the surrogate objective function
@@ -110,9 +114,22 @@ W = matrix(W,nrow=length(w),ncol=col)
 
 tau = 10
 batch = 3
+alpha = 0.1 # learning rate
+v = 2 # regularization parameter
+
 # for(t in seq(0,tau)){}
-	h = sgn(W,X,sample(1:nrow(X),1))
+samp_row <-sample(1:nrow(X),1)
+	h = sgn(W,X,samp_row)
 	g = objective(W,X,theta_vec)
+	W_temp = W-(alpha*g%*%t(X[samp_row,0:col])+alpha*h%*%t(X[samp_row,0:col]))
+	# i'm concerned that I don't have to transpose W before multiplying here. 
 
+for(i in seq(1,nrow(W_temp))) {
+	a = rep(min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))),col)
+	W_temp[1,]<-a
+}
 
+y-y_hat
+
+	
 
