@@ -31,17 +31,51 @@ f<-function(h){
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
 	ID_vec = c(rep(0,length(h)+1))
 	position = length(h)+1
-	for(bit in seq(1,length(h),2)){
+	x=0
+	while(bit <= length(h)) {
+		cat(bit)
 		if(h[bit]>0){
 			position=position
+			x=x+1
+			bit=bit+1
 		}
 		else{
-			position=position/2
+			position=(position/2) + x
 		}
+
 	}
 	ID_vec[position]=1
 	return(ID_vec)
 }
+
+findPos <- function(h){
+a<list()
+m=1
+while(m<=length(h)) {
+
+	a<-append(a,h[m-1:])
+	m=m*2
+}
+  # find number of rows from input
+  N <- length(h)
+
+  # go through and pick out the values in each tree that are valid based
+  # on previous route
+  out <- c(h[[1]], rep(0, N-1))
+  for(i in 2:N){
+    out[i] <- h[[i]][sum(out[i:(i-1)] * 2^(i-1)/(2^((i-1):1))) + 1]
+  }
+
+  # now find the final position in the bottom row and return as a vector
+  out_pos <- sum(out * 2^N/(2^(1:N))) + 1
+  full_vec <- rep(0, 2^N)
+  full_vec[out_pos] <- 1
+
+  return(full_vec)
+}
+
+
+
 
 update_probs<-function(theta,ID_vec){
 	# function takes as arguments: 
@@ -57,25 +91,26 @@ update_probs<-function(theta,ID_vec){
 }
 
 
-loss<-function(X,row,theta){
+loss<-function(X,samp_row,theta,g){
 	# function takes as arguments: 
 	# the dataset and row being evaluated
 	# predicted probabilities from the update_probs softmax
 	# function returns: 
 	# log loss value
-	true_base = as.numeric(X[row,ncol(X)])
-	log_loss = -true_base + log(sum(exp(theta)))
+	true_base = as.numeric(X[samp_row,ncol(X)])
+	probs<-theta[f(g),true_base+1]
+	log_loss = -true_base + log(sum(exp(probs)))
 	return(log_loss)
 }
 
-loss_prime<-function(theta,h){
-	ID_vec<-f(h)
-	probs<-theta[grep(1,ID_vec),]
+loss_prime<-function(X,row,theta,h){
+	true_base = as.numeric(X[row,ncol(X)])
+	probs<-theta[,true_base+1]
 	a = exp(sum(probs))/do.call(sum,lapply(probs,exp))**2
 	return(a)
 }
 
-objective<-function(W,X,theta,h){
+objective<-function(W,X,theta,samp_row){
 	# this is the surrogate objective function
 	# function takes as arguments: 
 	# Weights (W)
@@ -87,26 +122,30 @@ objective<-function(W,X,theta,h){
 	gs <-permutations(2,3,c(-1,1),repeats.allowed=T)
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
-		x<-X[row,c(1:ncol(X)-1)]
+		x<-X[samp_row,c(1:ncol(X)-1)]
 		first_term = t(g) %*% W %*% x
-		u_p <-update_probs(theta,f(h))
-		second_term = loss(X,row,u_p)
+		u_p <-update_theta(theta)
+		second_term = loss(X,samp_row,u_p,g)
 		func<-first_term+second_term
+		cat(paste(func,"\n"))
 		if(exists("argmax")){
-			if(func>argmax){
+			if(func<argmax){
 				argmax<-func
-				row<-row
+				argmax_row<-row
+				cat("argmax_set")
 			}}
 		else{
 			argmax<-func
+			argmax_row<-row
+			cat("argmax_set")
 			}
 	}
-	return(gs[row,])
+	cat(argmax_row)
+	return(gs[argmax_row,])
 }
 
-probs<-matrix(c(0.5,0.5),nrow=1,ncol=2)
-theta<-matrix(c(0,0,0,0,0,0,0.25,0.75),nrow=4,ncol=2,byrow=TRUE)
-ID_vec<-c(0,0,1,0)
+# probs<-matrix(c(0.5,0.5),nrow=1,ncol=2)
+theta<-matrix(c(0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5),nrow=4,ncol=2,byrow=TRUE)
 w = c(0.5,0.3,0.2)
 col = ncol(X)-1
 W = rep(w,col)
@@ -118,20 +157,39 @@ alpha = 0.1 # learning rate
 v = 2 # regularization parameter
 
 # for(t in seq(0,tau)){}
-samp_row <-sample(1:nrow(X),1)
+# samp_row <-sample(1:nrow(X),1)
+samp_row<-1
 	h = sgn(W,X,samp_row)
-	g = objective(W,X,theta,h)
+	g = objective(W,X,theta)
 	W_temp = W-(alpha*g%*%t(X[samp_row,0:col])+alpha*h%*%t(X[samp_row,0:col]))
-	# i'm concerned that I don't have to transpose W before multiplying here. 
 
 for(i in seq(1,nrow(W_temp))) {
-	a = rep(min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))),col)
-	W_temp[1,]<-a
+	a = min(1, v**(1/2) / (sum(W_temp[i,]**2)**(1/2))) %*% W_temp[i,]
+	W_temp[i,]<-a
 }
+W<-W_temp
 
 # delta_3 <- (-(Y - Y_hat) * sigmoidprime(Z_3))
 # djdw2 <- t(A_2) %*% delta_3
-theta<- theta+alpha*loss_prime(theta,h)
-
+# W_2 <- W_2 - scalar * djdw2
+true_base = as.numeric(X[samp_row,ncol(X)])
+probs<-theta[,true_base+1]
+delta<- (-(f(g) - probs) * loss_prime(X,samp_row,theta))
+# djdw2<- t(probs) %*% delta
+theta[,1]<- theta[,1] - alpha * delta
+theta<-update_theta(theta)
 	
-
+update_theta<-function(theta){
+	# function takes as arguments: 
+	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
+	# an 1 by k length matrix of probabilities
+	# function returns: 
+	# an m+1 by k matrix of softmax processed probabilities of p(y= l|j)	
+	for (i in seq(1,nrow(theta))){
+		theta_vec<-theta[i,]
+		denominator<-do.call(sum,lapply(theta_vec,exp))
+		new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
+		theta[i,]<-new_probs
+	}
+	return(theta)
+}
