@@ -74,7 +74,9 @@ loss<-function(X,samp_row,theta,g){
 	# log loss value
 	true_base = as.numeric(X[samp_row,ncol(X)])
 	probs<-t(theta)%*%f(g)
-	log_loss = -1 + log(sum(exp(probs)))
+	prob<-probs[2]
+	# log_loss = -true_base + log(sum(exp(probs)))
+	log_loss = - (sum(true_base * log(prob) + (1 - true_base) * log(1 - prob))) / length(true_base)
 	return(log_loss)
 }
 
@@ -100,8 +102,9 @@ objective<-function(W,X,theta,samp_row){
 		x<-X[samp_row,c(1:ncol(X)-1)]
 		first_term = t(g) %*% W %*% x
 		u_p <-update_theta(theta)
-		second_term = loss(X,samp_row,u_p,g)
-		func<-first_term+second_term
+		second_term = loss(X,samp_row,theta,g)
+		# func<-first_term+second_term
+		func<-second_term
 		cat(paste(first_term,second_term,"\n"))
 		if(exists("argmax")){
 			if(func<argmax){
@@ -118,8 +121,8 @@ objective<-function(W,X,theta,samp_row){
 }
 
 # probs<-matrix(c(0.5,0.5),nrow=1,ncol=2)
-theta<-matrix(c(0.4,0.6,0.4,0.6,0.4,0.6,0.4,0.6),nrow=4,ncol=2,byrow=TRUE)
-w = c(5,10,15)
+theta<-matrix(c(0.2,0.8,0.3,0.7,0.4,0.6,0.5,0.5),nrow=4,ncol=2,byrow=TRUE)
+w = c(0.1,0.3,0.15)
 col = ncol(X)-1
 W = rep(w,col)
 W = matrix(W,nrow=length(w),ncol=col)
