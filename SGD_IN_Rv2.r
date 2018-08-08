@@ -24,58 +24,33 @@ sgn<-function(W,X,row){
 	sign  = sign(out_mat)
 	return(sign)}
 
-f<-function(h){
+f <- function(h){
 	# function takes as arguments:
 	# an m-bit vector of potential split decisions (h)
 	# function returns: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
-	ID_vec = c(rep(0,length(h)+1))
-	position = length(h)+1
-	x=0
-	while(bit <= length(h)) {
-		cat(bit)
-		if(h[bit]>0){
-			position=position
-			x=x+1
-			bit=bit+1
-		}
-		else{
-			position=(position/2) + x
-		}
+	h[h==-1]<-0
+	h<-list(h[1],h[2:3])
+	
+	# TODO: Rewrite this^ so it works for a longer m decision tree
 
+	# find number of rows from input
+	N <- length(h)
+
+	# go through and pick out the values in each tree that are valid based
+	# on previous route
+	out <- c(h[[1]], rep(0, N-1))
+	for(i in 2:N){
+	out[i] <- h[[i]][sum(out[i:(i-1)] * 2^(i-1)/(2^((i-1):1))) + 1]
 	}
-	ID_vec[position]=1
-	return(ID_vec)
+
+	# now find the final position in the bottom row and return as a vector
+	out_pos <- sum(out * 2^N/(2^(1:N))) + 1
+	full_vec <- rep(0, 2^N)
+	full_vec[out_pos] <- 1
+
+	return(full_vec)
 }
-
-findPos <- function(h){
-a<list()
-m=1
-while(m<=length(h)) {
-
-	a<-append(a,h[m-1:])
-	m=m*2
-}
-  # find number of rows from input
-  N <- length(h)
-
-  # go through and pick out the values in each tree that are valid based
-  # on previous route
-  out <- c(h[[1]], rep(0, N-1))
-  for(i in 2:N){
-    out[i] <- h[[i]][sum(out[i:(i-1)] * 2^(i-1)/(2^((i-1):1))) + 1]
-  }
-
-  # now find the final position in the bottom row and return as a vector
-  out_pos <- sum(out * 2^N/(2^(1:N))) + 1
-  full_vec <- rep(0, 2^N)
-  full_vec[out_pos] <- 1
-
-  return(full_vec)
-}
-
-
-
 
 update_probs<-function(theta,ID_vec){
 	# function takes as arguments: 
@@ -98,8 +73,8 @@ loss<-function(X,samp_row,theta,g){
 	# function returns: 
 	# log loss value
 	true_base = as.numeric(X[samp_row,ncol(X)])
-	probs<-theta[f(g),true_base+1]
-	log_loss = -true_base + log(sum(exp(probs)))
+	probs<-t(theta)%*%f(g)
+	log_loss = -1 + log(sum(exp(probs)))
 	return(log_loss)
 }
 
@@ -127,17 +102,15 @@ objective<-function(W,X,theta,samp_row){
 		u_p <-update_theta(theta)
 		second_term = loss(X,samp_row,u_p,g)
 		func<-first_term+second_term
-		cat(paste(func,"\n"))
+		cat(paste(first_term,second_term,"\n"))
 		if(exists("argmax")){
 			if(func<argmax){
 				argmax<-func
 				argmax_row<-row
-				cat("argmax_set")
 			}}
 		else{
 			argmax<-func
 			argmax_row<-row
-			cat("argmax_set")
 			}
 	}
 	cat(argmax_row)
@@ -145,8 +118,8 @@ objective<-function(W,X,theta,samp_row){
 }
 
 # probs<-matrix(c(0.5,0.5),nrow=1,ncol=2)
-theta<-matrix(c(0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5),nrow=4,ncol=2,byrow=TRUE)
-w = c(0.5,0.3,0.2)
+theta<-matrix(c(0.4,0.6,0.4,0.6,0.4,0.6,0.4,0.6),nrow=4,ncol=2,byrow=TRUE)
+w = c(5,10,15)
 col = ncol(X)-1
 W = rep(w,col)
 W = matrix(W,nrow=length(w),ncol=col)
@@ -160,7 +133,7 @@ v = 2 # regularization parameter
 # samp_row <-sample(1:nrow(X),1)
 samp_row<-1
 	h = sgn(W,X,samp_row)
-	g = objective(W,X,theta)
+	g = objective(W,X,theta,samp_row)
 	W_temp = W-(alpha*g%*%t(X[samp_row,0:col])+alpha*h%*%t(X[samp_row,0:col]))
 
 for(i in seq(1,nrow(W_temp))) {
