@@ -82,7 +82,7 @@ loss<-function(X,samp_row,theta,g){
 
 loss_prime<-function(theta){
 	a = 1/theta
-	a = -1/(1-theta)
+	# a = -1/(1-theta)
 	return(a)
 }
 
@@ -100,8 +100,8 @@ objective<-function(W,X,theta,samp_row){
 		g<-gs[row,]
 		x<-X[samp_row,c(1:ncol(X)-1)]
 		first_term = t(g) %*% W %*% x
-		# u_p <-update_theta(theta)
-		second_term = loss(X,samp_row,theta,g)
+		u_p <-update_theta(theta)
+		second_term = loss(X,samp_row,u_p,g)
 		# func<-first_term+second_term
 		func<-second_term
 		# cat(paste(first_term,second_term,"\n"))
@@ -140,12 +140,12 @@ update_theta<-function(theta){
 
 
 theta<-matrix(c(
-				0.8,0.2,
-				0.1,0.9,
+				0.85,0.15,
+				0.99,0.01,
 				0.7,0.3,
 				0.4,0.6
 				),nrow=4,ncol=2,byrow=TRUE)
-w = c(-3,0.5,.5)
+w = c(-1,2,3)
 # w = c(-0.6,0.15,.5) OPTIMAL
 col = ncol(X)-1
 W = rep(w,col)
@@ -155,53 +155,43 @@ tau = 1000
 batch = 3
 alpha = 0.1 # learning rate
 v = 02 # regularization parameter
+
 for(t in seq(0,tau)){
 	samp_row <-sample(1:nrow(X),1)
 	# current path
 	h = sgn(W,X,samp_row) 
-	
+	# optimal path based on cost function (not on the other term)
 	g = objective(W,X,theta,samp_row)
 	W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
-	# if g gives the worst path then use:
-	# W = W+ (alpha*-(g+h)%*%t(X[samp_row,0:col]))
 
-
-	# subtract the worst and add the current
-	# W_temp = W+(alpha*g%*%t(X[samp_row,0:col]))
-	# +(alpha*h%*%t(X[samp_row,0:col]))
-
-# for(i in seq(1,nrow(W_temp))) {
-# 	a = min(1, v**(1/2) / (sum(W_temp[i,]**2)**(1/2))) %*% W_temp[i,]
-# 	W_temp[i,]<-a
-# }
-	
-	# W<- (W[,1]+W[,2])/2
-	# W<-rep(W,col)
-	# W = matrix(W,nrow=length(w),ncol=col)
+for(i in seq(1,nrow(W))) {
+	a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
+	W[i,]<-a
+	}
 
 # delta_3 <- (-(Y - Y_hat) * sigmoidprime(Z_3))
 # djdw2 <- t(A_2) %*% delta_3
 # W_2 <- W_2 - scalar * djdw2
 
-# true_base = as.numeric(X[samp_row,ncol(X)])
-# probs<-theta[,true_base+1]
-# if (true_base==1){
-# 	true_probs<-c(0,1)
-# } else {
-# 	true_probs<-c(1,0)
-# }
-
-# error = true_probs - f(g) %*% loss_prime(theta)
-# # gradient = error %*% true_probs
-# # theta = theta -alpha * as.numeric(gradient)
-
-# r<-grep(1,f(sgn(W,X,samp_row)))
-# theta[r,] = theta[r,]+ alpha * error
-
+true_base = as.numeric(X[samp_row,ncol(X)])
+r<-grep(1,f(sgn(W,X,samp_row)))
+probs<-theta[r,]
+if (true_base==1){
+	true_probs<-c(0,1)
+} else {
+	true_probs<-c(1,0)
 }
-# theta<-update_theta(theta)
+
+# cat(theta,"\n")
+error = -(true_probs - probs) %*% t(loss_prime(theta))
+# gradient = error %*% true_probs
+error<-update_theta(error)
+theta = theta - alpha * cbind(t(error),t(error))
+}
+
 # W_temp = W+ (alpha*(-g) %*%t(X[samp_row,0:col]))
 # W=W_temp
+theta<-update_theta(theta)
 for(i in seq(1,10)){
 	cat(paste(f(sgn(W,X,i))),"\n")
 	# cat(W %*% X[i,0:col])
