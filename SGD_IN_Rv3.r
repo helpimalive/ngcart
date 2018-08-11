@@ -114,11 +114,16 @@ update_theta<-function(theta){
 	# an 1 by k length matrix of probabilities
 	# function returns: 
 	# an m+1 by k matrix of softmax processed probabilities of p(y= l|j)	
-	for (i in seq(1,nrow(theta))){
-		theta_vec<-theta[i,]
-		denominator<-do.call(sum,lapply(theta_vec,exp))
-		new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
-		theta[i,]<-new_probs
+	if(!is.null(nrow(theta))){
+		for (i in seq(1,nrow(theta))){
+			theta_vec<-theta[i,]
+			denominator<-do.call(sum,lapply(theta_vec,exp))
+			new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
+			theta[i,]<-new_probs
+	}
+	} else {
+		denominator<-do.call(sum,lapply(theta,exp))
+		theta<-matrix(unlist(lapply(theta, function(x) exp(x)/denominator)))	
 	}
 	return(theta)
 }
@@ -168,21 +173,29 @@ if (true_base==1){
 	true_probs<-c(1,0)
 }
 
+# cat("true class =",true_base,"\n")
+# cat("ideal/true probabilities =",true_probs,"\n")
+# cat("current probabilities=",probs,"\n")
 error = -loss_prime(true_probs-probs)
-denominator<-do.call(sum,lapply(error,exp))
-error<-matrix(unlist(lapply(error, function(x) exp(x)/denominator)))
-theta[r,] = theta[r,] + alpha* error
-theta
+# cat("gradient = ",error,"\n")
+error = t((error))
+# cat("error = ",error,"\n")
+theta[r,] = update_theta(theta[r,] - alpha* error)
+# cat("updated probabilities after softmax= ",theta[r,],"\n")
+
+
 # error = -(true_probs - probs) %*% t(loss_prime(theta))
 # error<-update_theta(error)
 # theta = theta - alpha * cbind(t(error),t(error))
 
 }
 
-theta<-update_theta(theta)
+# theta<-update_theta(theta)
 for(i in seq(1,10)){
-	cat(paste(f(sgn(W,X,i))),"\n")
+	cat("\n","predicted leaf =",f(sgn(W,X,i)),"\n")
 	# cat(W %*% X[i,0:col])
-	cat(paste(f(sgn(W,X,i))%*%theta),"\n")
+	cat("probabilities at leaf= ",f(sgn(W,X,i))%*%theta,"\n")
+	true_base = as.numeric(X[i,ncol(X)])
+	cat(" probability of correct assignment = ",(f(sgn(W,X,i))%*%theta)[true_base+1],"\n")
 }
 
