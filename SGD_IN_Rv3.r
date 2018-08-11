@@ -52,30 +52,16 @@ f <- function(h){
 	return(full_vec)
 }
 
-update_probs<-function(theta,ID_vec){
-	# function takes as arguments: 
-	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
-	# an 1 by k length matrix of probabilities
-	# function returns: 
-	# an m+1 by k matrix of softmax processed probabilities of p(y= l|j)	
-	theta_vec<-theta[grep(1,ID_vec),]
-	denominator<-do.call(sum,lapply(theta_vec,exp))
-	new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
-	new_probs = (ID_vec) %*% t(new_probs)
-	return(new_probs)
-}
-
 
 loss<-function(X,samp_row,theta,g){
 	# function takes as arguments: 
 	# the dataset and row being evaluated
-	# predicted probabilities from the update_probs softmax
+	# predicted probabilities from the update_theta softmax
 	# function returns: 
 	# log loss value
 	true_base = as.numeric(X[samp_row,ncol(X)])
 	probs<-t(theta)%*%f(g)
 	prob<-probs[2]
-	# log_loss = -true_base + log(sum(exp(probs)))
 	log_loss = - (sum(true_base * log(prob) + (1 - true_base) * log(1 - prob))) / length(true_base)
 	return(log_loss)
 }
@@ -151,9 +137,9 @@ col = ncol(X)-1
 W = rep(w,col)
 W = matrix(W,nrow=length(w),ncol=col)
 
-tau = 1000
+tau = 100
 batch = 3
-alpha = 0.1 # learning rate
+alpha = 0.01 # learning rate
 v = 02 # regularization parameter
 
 for(t in seq(0,tau)){
@@ -182,15 +168,17 @@ if (true_base==1){
 	true_probs<-c(1,0)
 }
 
-# cat(theta,"\n")
-error = -(true_probs - probs) %*% t(loss_prime(theta))
-# gradient = error %*% true_probs
-error<-update_theta(error)
-theta = theta - alpha * cbind(t(error),t(error))
+error = -loss_prime(true_probs-probs)
+denominator<-do.call(sum,lapply(error,exp))
+error<-matrix(unlist(lapply(error, function(x) exp(x)/denominator)))
+theta[r,] = theta[r,] + alpha* error
+theta
+# error = -(true_probs - probs) %*% t(loss_prime(theta))
+# error<-update_theta(error)
+# theta = theta - alpha * cbind(t(error),t(error))
+
 }
 
-# W_temp = W+ (alpha*(-g) %*%t(X[samp_row,0:col]))
-# W=W_temp
 theta<-update_theta(theta)
 for(i in seq(1,10)){
 	cat(paste(f(sgn(W,X,i))),"\n")
@@ -198,29 +186,3 @@ for(i in seq(1,10)){
 	cat(paste(f(sgn(W,X,i))%*%theta),"\n")
 }
 
-W
-# W<- (W[,1]+W[,2])/2
-# W<-rep(W,col)
-# W = matrix(W,nrow=length(w),ncol=col)
-
-# delta<- (-(true_probs - f(g) %*% theta ) %*% t(loss_prime(theta)))
-# # djdw2<- t(probs) %*% delta
-# theta<- theta + alpha %*% t(delta)
-# theta<-update_theta(theta)
-# cat(theta)
-	
-
-# update_theta<-function(theta){
-# 	# function takes as arguments: 
-# 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
-# 	# an 1 by k length matrix of probabilities
-# 	# function returns: 
-# 	# an m+1 by k matrix of softmax processed probabilities of p(y= l|j)	
-# 	for (i in seq(1,ncol(theta))){
-# 		theta_vec<-theta[,i]
-# 		denominator<-do.call(sum,lapply(theta_vec,exp))
-# 		new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
-# 		theta[,i]<-new_probs
-# 	}
-# 	return(theta)
-# }
