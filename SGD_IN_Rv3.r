@@ -131,10 +131,10 @@ update_theta<-function(theta){
 
 
 theta<-matrix(c(
-				0.85,0.15,
-				0.99,0.01,
-				0.7,0.3,
-				0.4,0.6
+				0.65,0.35,
+				0.55,0.45,
+				0.45,0.55,
+				0.35,0.65
 				),nrow=4,ncol=2,byrow=TRUE)
 w = c(-1,2,3)
 # w = c(-0.6,0.15,.5) OPTIMAL
@@ -142,7 +142,7 @@ col = ncol(X)-1
 W = rep(w,col)
 W = matrix(W,nrow=length(w),ncol=col)
 
-tau = 100
+tau = 1000
 batch = 3
 alpha = 0.01 # learning rate
 v = 02 # regularization parameter
@@ -160,9 +160,6 @@ for(i in seq(1,nrow(W))) {
 	W[i,]<-a
 	}
 
-# delta_3 <- (-(Y - Y_hat) * sigmoidprime(Z_3))
-# djdw2 <- t(A_2) %*% delta_3
-# W_2 <- W_2 - scalar * djdw2
 
 true_base = as.numeric(X[samp_row,ncol(X)])
 r<-grep(1,f(sgn(W,X,samp_row)))
@@ -173,24 +170,24 @@ if (true_base==1){
 	true_probs<-c(1,0)
 }
 
-# cat("true class =",true_base,"\n")
-# cat("ideal/true probabilities =",true_probs,"\n")
-# cat("current probabilities=",probs,"\n")
-error = -loss_prime(true_probs-probs)
-# cat("gradient = ",error,"\n")
-error = t((error))
-# cat("error = ",error,"\n")
-theta[r,] = update_theta(theta[r,] - alpha* error)
-# cat("updated probabilities after softmax= ",theta[r,],"\n")
+
+# error = -loss_prime(true_probs-probs)
+# error = t((error))
+# theta[r,] = update_theta(theta[r,] - alpha* error)
 
 
-# error = -(true_probs - probs) %*% t(loss_prime(theta))
-# error<-update_theta(error)
-# theta = theta - alpha * cbind(t(error),t(error))
+# multiply the A matrix by the weight matrix
+# Z_3 <- A_2 %*% W_2
+# delta_3 <- (-(Y - Y_hat) * sigmoidprime(Z_3))
+# djdw2 <- t(A_2) %*% delta_3
+# W_2 <- W_2 - scalar * djdw2
+error = -(true_probs - t((probs)))
+gradient = X[samp_row,0:col] * as.vector(error)
+theta[r,] = theta[r,] - alpha * t(gradient)
 
 }
 
-# theta<-update_theta(theta)
+theta<-update_theta(theta)
 for(i in seq(1,10)){
 	cat("\n","predicted leaf =",f(sgn(W,X,i)),"\n")
 	# cat(W %*% X[i,0:col])
