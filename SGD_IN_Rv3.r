@@ -142,7 +142,7 @@ col = ncol(X)-1
 W = rep(w,col)
 W = matrix(W,nrow=length(w),ncol=col)
 
-tau = 1000
+tau = 100
 batch = 3
 alpha = 0.01 # learning rate
 v = 02 # regularization parameter
@@ -171,19 +171,14 @@ if (true_base==1){
 }
 
 
-# error = -loss_prime(true_probs-probs)
-# error = t((error))
-# theta[r,] = update_theta(theta[r,] - alpha* error)
+# Gradient Version but no Partial Derivative
+gradient = loss_prime(probs)
+theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
 
-
-# multiply the A matrix by the weight matrix
-# Z_3 <- A_2 %*% W_2
-# delta_3 <- (-(Y - Y_hat) * sigmoidprime(Z_3))
-# djdw2 <- t(A_2) %*% delta_3
-# W_2 <- W_2 - scalar * djdw2
-error = -(true_probs - t((probs)))
-gradient = X[samp_row,0:col] * as.vector(error)
-theta[r,] = theta[r,] - alpha * t(gradient)
+# Gradient Version but no Partial Derivative
+# error = -(true_probs - t((probs)))
+# gradient = X[samp_row,0:col] * as.vector(error)
+# theta[r,] = theta[r,] - alpha * t(gradient)
 
 }
 
