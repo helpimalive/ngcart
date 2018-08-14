@@ -85,7 +85,7 @@ objective<-function(W,X,theta,samp_row){
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
 		x<-X[samp_row,c(1:ncol(X)-1)]
-		first_term = t(g) %*% W %*% x
+		first_term = f(t(g) %*% W %*% x
 		u_p <-update_theta(theta)
 		second_term = loss(X,samp_row,u_p,g)
 		# func<-first_term+second_term
@@ -108,6 +108,36 @@ objective<-function(W,X,theta,samp_row){
 	return(gs[argmax_row,])
 }
 
+objective_verbatum<-function(W,X,theta,samp_row){
+	# this is the surrogate objective function
+	# function takes as arguments: 
+	# Weights (W)
+	# row being tested (row)
+	# dataset (X)
+	# theta vector
+	# function returns the argument (g) that maximize the expression: 
+	library(gtools)
+	gs <-permutations(2,3,c(-1,1),repeats.allowed=T)
+	for(row in c(1:nrow(gs))) {
+		g<-gs[row,]
+		x<-X[samp_row,c(1:ncol(X)-1)]
+		first_term = sum((sgn(W,X,samp_row) - g)^2)
+		second_term = loss(X,samp_row,theta,g)
+		val <- first_term+second_term
+		if(exists("argmax")){
+			if(val>argmax){
+				argmax_row<-row
+				argmax<-val
+			}
+			} else {
+				argmax_row<-row
+				argmax<-val
+			}
+	}
+
+	return(gs[argmax_row,])
+}
+
 update_theta<-function(theta){
 	# function takes as arguments: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
@@ -119,12 +149,11 @@ update_theta<-function(theta){
 			theta_vec<-theta[i,]
 			denominator<-do.call(sum,lapply(theta_vec,exp))
 			new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
-			theta[i,]<-new_probs
-	}
-	} else {
-		denominator<-do.call(sum,lapply(theta,exp))
-		theta<-matrix(unlist(lapply(theta, function(x) exp(x)/denominator)))	
-	}
+			theta[i,]<-new_probs}
+			} else {
+			denominator<-do.call(sum,lapply(theta,exp))
+			theta<-matrix(unlist(lapply(theta, function(x) exp(x)/denominator)))	
+			}
 	return(theta)
 }
 
@@ -136,7 +165,7 @@ theta<-matrix(c(
 				0.45,0.55,
 				0.35,0.65
 				),nrow=4,ncol=2,byrow=TRUE)
-w = c(-1,2,3)
+w = c(3,-2,3)
 # w = c(-0.6,0.15,.5) OPTIMAL
 col = ncol(X)-1
 W = rep(w,col)
@@ -151,15 +180,19 @@ for(t in seq(0,tau)){
 	samp_row <-sample(1:nrow(X),1)
 	# current path
 	h = sgn(W,X,samp_row) 
+
 	# optimal path based on cost function (not on the other term)
 	g = objective(W,X,theta,samp_row)
 	W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
+
+	# using the paper's loss-augmented inference
+	g = objective_verbatum(W,X,theta,samp_row)
+	W = W +  (alpha*(-g+h)%*%t(X[samp_row,0:col]))
 
 for(i in seq(1,nrow(W))) {
 	a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
 	W[i,]<-a
 	}
-
 
 true_base = as.numeric(X[samp_row,ncol(X)])
 r<-grep(1,f(sgn(W,X,samp_row)))
@@ -170,7 +203,6 @@ if (true_base==1){
 	true_probs<-c(1,0)
 }
 
-
 # Gradient Version but no Partial Derivative
 gradient = loss_prime(probs)
 theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
@@ -179,7 +211,6 @@ theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
 # error = -(true_probs - t((probs)))
 # gradient = X[samp_row,0:col] * as.vector(error)
 # theta[r,] = theta[r,] - alpha * t(gradient)
-
 }
 
 theta<-update_theta(theta)
