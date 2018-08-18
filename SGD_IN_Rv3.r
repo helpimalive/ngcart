@@ -85,7 +85,7 @@ objective<-function(W,X,theta,samp_row){
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
 		x<-X[samp_row,c(1:ncol(X)-1)]
-		first_term = f(t(g) %*% W %*% x
+		first_term = g %*% W %*% x
 		u_p <-update_theta(theta)
 		second_term = loss(X,samp_row,u_p,g)
 		# func<-first_term+second_term
@@ -118,21 +118,27 @@ objective_verbatum<-function(W,X,theta,samp_row){
 	# function returns the argument (g) that maximize the expression: 
 	library(gtools)
 	gs <-permutations(2,3,c(-1,1),repeats.allowed=T)
+	second_max<-0
+	first_max<-0
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
 		x<-X[samp_row,c(1:ncol(X)-1)]
+
 		first_term = sum((sgn(W,X,samp_row) - g)^2)
-		second_term = loss(X,samp_row,theta,g)
+		u_p <-update_theta(theta)
+		second_term = loss(X,samp_row,u_p,g)
+		# cat(row," ",first_term," ",second_term," ",g,"\n")
 		val <- first_term+second_term
-		if(exists("argmax")){
-			if(val>argmax){
+			if(
+				second_term>=second_max 
+				& 
+				first_term>first_max
+				){
 				argmax_row<-row
 				argmax<-val
-			}
-			} else {
-				argmax_row<-row
-				argmax<-val
-			}
+				second_max<-second_term
+				first_max<-first_term
+			} 
 	}
 
 	return(gs[argmax_row,])
@@ -171,11 +177,12 @@ col = ncol(X)-1
 W = rep(w,col)
 W = matrix(W,nrow=length(w),ncol=col)
 
-tau = 100
+tau = 500
 batch = 3
 alpha = 0.01 # learning rate
 v = 02 # regularization parameter
 
+####STEP 1
 for(t in seq(0,tau)){
 	samp_row <-sample(1:nrow(X),1)
 	# current path
@@ -184,10 +191,6 @@ for(t in seq(0,tau)){
 	# optimal path based on cost function (not on the other term)
 	g = objective(W,X,theta,samp_row)
 	W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
-
-	# using the paper's loss-augmented inference
-	g = objective_verbatum(W,X,theta,samp_row)
-	W = W +  (alpha*(-g+h)%*%t(X[samp_row,0:col]))
 
 for(i in seq(1,nrow(W))) {
 	a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
@@ -203,22 +206,76 @@ if (true_base==1){
 	true_probs<-c(1,0)
 }
 
-# Gradient Version but no Partial Derivative
+# Gradient Version with Partial Derivative
 gradient = loss_prime(probs)
 theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
 
-# Gradient Version but no Partial Derivative
-# error = -(true_probs - t((probs)))
-# gradient = X[samp_row,0:col] * as.vector(error)
-# theta[r,] = theta[r,] - alpha * t(gradient)
 }
 
-theta<-update_theta(theta)
-for(i in seq(1,10)){
-	cat("\n","predicted leaf =",f(sgn(W,X,i)),"\n")
-	# cat(W %*% X[i,0:col])
-	cat("probabilities at leaf= ",f(sgn(W,X,i))%*%theta,"\n")
-	true_base = as.numeric(X[i,ncol(X)])
-	cat(" probability of correct assignment = ",(f(sgn(W,X,i))%*%theta)[true_base+1],"\n")
+#### END STEP 1
+t_theta<-theta
+total_loss(t_theta,W)
+W
+# update_theta(theta)
+#### BEGIN STEP 2
+for(t in seq(0,tau)){
+	samp_row <-sample(1:nrow(X),1)
+	# current path
+	h = sgn(W,X,samp_row) 
+
+	# using the paper's loss-augmented inference
+	g_v = objective_verbatum(W,X,theta,samp_row)
+	g_o = objective(W,X,theta,samp_row)
+	W = W 
+		# + (alpha*(g_o-h)%*%t(X[samp_row,0:col]))
+		- (alpha*(g_v-h)%*%t(X[samp_row,0:col]))
+	# g-h is worst
+	# h-g is best
+	# g = objective(W,X,theta,samp_row)
+	# W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
+
+for(i in seq(1,nrow(W))) {
+	a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
+	W[i,]<-a
+	}
+
+true_base = as.numeric(X[samp_row,ncol(X)])
+r<-grep(1,f(sgn(W,X,samp_row)))
+probs<-theta[r,]
+if (true_base==1){
+	true_probs<-c(0,1)
+} else {
+	true_probs<-c(1,0)
 }
 
+# Gradient Version with Partial Derivative
+gradient = loss_prime(probs)
+theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
+
+}
+###END STEP 2
+total_loss(theta,W)
+W
+# update_theta(theta)
+# theta<-update_theta(theta)
+
+
+total_loss<-function(theta,W){
+	test_theta<-update_theta(theta)
+	total_loss<-0
+	for(i in seq(1,10)){
+		true_base = as.numeric(X[i,ncol(X)])
+		total_loss = total_loss + 1- (f(sgn(W,X,i))%*%test_theta)[true_base+1]
+	}
+		return(total_loss)
+}
+
+
+# test_theta<-update_theta(theta)
+# for(i in seq(1,10)){
+# 	cat("\n","predicted leaf =",f(sgn(W,X,i)),"\n")
+# 	# cat(W %*% X[i,0:col])
+# 	cat("probabilities at leaf= ",f(sgn(W,X,i))%*%test_theta,"\n")
+# 	true_base = as.numeric(X[i,ncol(X)])
+# 	cat(" probability of correct assignment = ",(f(sgn(W,X,i))%*%test_theta)[true_base+1],"\n")
+# }
