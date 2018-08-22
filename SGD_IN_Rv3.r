@@ -1,4 +1,3 @@
-
 X = matrix(
 	c(2.771244718,1.784783929,0,
 		1.728571309,1.169761413,0,
@@ -278,4 +277,3 @@ total_loss<-function(theta,W){
 # 	cat("probabilities at leaf= ",f(sgn(W,X,i))%*%test_theta,"\n")
 # 	true_base = as.numeric(X[i,ncol(X)])
 # 	cat(" probability of correct assignment = ",(f(sgn(W,X,i))%*%test_theta)[true_base+1],"\n")
-# }
