@@ -1,18 +1,3 @@
-X = matrix(
-	c(2.771244718,1.784783929,0,
-		1.728571309,1.169761413,0,
-		3.678319846,2.81281357,0,
-		3.961043357,2.61995032,0,
-		2.999208922,2.209014212,0,
-		7.497545867,3.162953546,1,
-		9.00220326,3.339047188,1,
-		7.444542326,0.476683375,1,
-		10.12493903,3.234550982,1,
-		6.642287351,3.319983761,1),
-	nrow=10,
-	ncol=3,
-	byrow=TRUE)
-
 
 sgn<-function(W,X,row){
 	# W is the weight matrix
@@ -162,103 +147,6 @@ update_theta<-function(theta){
 	return(theta)
 }
 
-
-
-theta<-matrix(c(
-				0.65,0.35,
-				0.55,0.45,
-				0.45,0.55,
-				0.35,0.65
-				),nrow=4,ncol=2,byrow=TRUE)
-w = c(3,-2,3)
-# w = c(-0.6,0.15,.5) OPTIMAL
-col = ncol(X)-1
-W = rep(w,col)
-W = matrix(W,nrow=length(w),ncol=col)
-
-tau = 500
-batch = 3
-alpha = 0.01 # learning rate
-v = 02 # regularization parameter
-
-####STEP 1
-for(t in seq(0,tau)){
-	samp_row <-sample(1:nrow(X),1)
-	# current path
-	h = sgn(W,X,samp_row) 
-
-	# optimal path based on cost function (not on the other term)
-	g = objective(W,X,theta,samp_row)
-	W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
-
-for(i in seq(1,nrow(W))) {
-	a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
-	W[i,]<-a
-	}
-
-true_base = as.numeric(X[samp_row,ncol(X)])
-r<-grep(1,f(sgn(W,X,samp_row)))
-probs<-theta[r,]
-if (true_base==1){
-	true_probs<-c(0,1)
-} else {
-	true_probs<-c(1,0)
-}
-
-# Gradient Version with Partial Derivative
-gradient = loss_prime(probs)
-theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
-
-}
-
-#### END STEP 1
-t_theta<-theta
-total_loss(t_theta,W)
-W
-# update_theta(theta)
-#### BEGIN STEP 2
-for(t in seq(0,tau)){
-	samp_row <-sample(1:nrow(X),1)
-	# current path
-	h = sgn(W,X,samp_row) 
-
-	# using the paper's loss-augmented inference
-	g_v = objective_verbatum(W,X,theta,samp_row)
-	g_o = objective(W,X,theta,samp_row)
-	W = W 
-		# + (alpha*(g_o-h)%*%t(X[samp_row,0:col]))
-		- (alpha*(g_v-h)%*%t(X[samp_row,0:col]))
-	# g-h is worst
-	# h-g is best
-	# g = objective(W,X,theta,samp_row)
-	# W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
-
-for(i in seq(1,nrow(W))) {
-	a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
-	W[i,]<-a
-	}
-
-true_base = as.numeric(X[samp_row,ncol(X)])
-r<-grep(1,f(sgn(W,X,samp_row)))
-probs<-theta[r,]
-if (true_base==1){
-	true_probs<-c(0,1)
-} else {
-	true_probs<-c(1,0)
-}
-
-# Gradient Version with Partial Derivative
-gradient = loss_prime(probs)
-theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
-
-}
-###END STEP 2
-total_loss(theta,W)
-W
-# update_theta(theta)
-# theta<-update_theta(theta)
-
-
 total_loss<-function(theta,W){
 	test_theta<-update_theta(theta)
 	total_loss<-0
@@ -270,6 +158,134 @@ total_loss<-function(theta,W){
 }
 
 
+greedy<-function(theta,W,tau,alpha,v){
+	for(t in seq(0,tau)){
+		samp_row <-sample(1:nrow(X),1)
+		# current path
+		h = sgn(W,X,samp_row) 
+
+		# optimal path based on cost function (not on the other term)
+		g = objective(W,X,theta,samp_row)
+		W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
+
+	for(i in seq(1,nrow(W))) {
+		a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
+		W[i,]<-a
+		}
+
+	true_base = as.numeric(X[samp_row,ncol(X)])
+	r<-grep(1,f(sgn(W,X,samp_row)))
+	probs<-theta[r,]
+
+	if (true_base==1){
+		true_probs<-c(0,1)
+		} else {
+		true_probs<-c(1,0)
+		}
+	# Gradient Version with Partial Derivative
+	gradient = loss_prime(probs)
+	theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
+	}
+	ret <-list("theta" = theta, "W"=W)
+	return(ret)
+	}
+
+
+non_greedy<-function(theta,W,tau,alpha,v){
+	for(t in seq(0,tau)){
+		samp_row <-sample(1:nrow(X),1)
+		# current path
+		h = sgn(W,X,samp_row) 
+
+		# using the paper's loss-augmented inference
+		g_v = objective_verbatum(W,X,theta,samp_row)
+		g_o = objective(W,X,theta,samp_row)
+		W = W 
+			# + (alpha*(g_o-h)%*%t(X[samp_row,0:col]))
+			- (alpha*(g_v-h)%*%t(X[samp_row,0:col]))
+		# g-h is worst
+		# h-g is best
+		# g = objective(W,X,theta,samp_row)
+		# W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
+
+	for(i in seq(1,nrow(W))) {
+		a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
+		W[i,]<-a
+		}
+
+	true_base = as.numeric(X[samp_row,ncol(X)])
+	r<-grep(1,f(sgn(W,X,samp_row)))
+	probs<-theta[r,]
+
+	if (true_base==1){
+		true_probs<-c(0,1)
+		} else {
+		true_probs<-c(1,0)
+		}
+
+	# Gradient Version with Partial Derivative
+	gradient = loss_prime(probs)
+	theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
+
+	}
+	ret <-list("theta" = theta, "W"=W)
+	return(ret)
+}
+
+
+
+X = matrix(
+	c(2.771244718,1.784783929,0,
+		1.728571309,1.169761413,0,
+		3.678319846,2.81281357,0,
+		3.961043357,2.61995032,0,
+		2.999208922,2.209014212,0,
+		7.497545867,3.162953546,1,
+		9.00220326,3.339047188,1,
+		7.444542326,0.476683375,1,
+		10.12493903,3.234550982,1,
+		6.642287351,3.319983761,1),
+	nrow=10,
+	ncol=3,
+	byrow=TRUE)
+
+
+theta<-matrix(c(
+				0.01,0.35,
+				0.55,0.45,
+				0.45,0.55,
+				0.35,0.65
+				),nrow=4,ncol=2,byrow=TRUE)
+w = c(3,-2,3)
+# w = c(-0.6,0.15,.5) OPTIMAL
+col = ncol(X)-1
+W = rep(w,col)
+W = matrix(W,nrow=length(w),ncol=col)
+
+tau = 80
+batch = 3
+alpha = 0.01 # learning rate
+v = 02 # regularization parameter
+
+
+results<-data.frame(g_tau=integer(),greedy_loss=double(),ng_tau=double(),ng_loss=double())
+for(tau in seq(0,100,2)){
+	out<-greedy(theta,W,tau,alpha,v)
+	g_loss<- total_loss(out$theta,out$W)
+	g_tau<- tau
+	out<-non_greedy(out$theta,out$W,tau,alpha,v)
+	ng_loss<- total_loss(out$theta,out$W)
+	ng_tau<- 2*tau
+	results<-rbind(results,c(g_tau,g_loss,ng_tau,ng_loss))
+	cat(g_tau," ",g_loss," ",ng_tau," ",ng_loss,"\n")
+}
+names(results)<-c('g_tau','greedy_loss','ng_tau','ng_loss')
+res_a<-results[c('g_tau','greedy_loss')]
+names(res_a)<-c('tau','greedy_loss')
+res_b<-results[c('ng_tau','ng_loss')]
+names(res_b)<-c('tau','non_greedy_loss')
+res_c<- merge(res_a,res_b)
+sum(res_c$non_greedy_loss<res_c$greedy_loss)/nrow(res_c)
 # test_theta<-update_theta(theta)
 # for(i in seq(1,10)){
 # 	cat("\n","predicted leaf =",f(sgn(W,X,i)),"\n")
@@ -277,3 +293,5 @@ total_loss<-function(theta,W){
 # 	cat("probabilities at leaf= ",f(sgn(W,X,i))%*%test_theta,"\n")
 # 	true_base = as.numeric(X[i,ncol(X)])
 # 	cat(" probability of correct assignment = ",(f(sgn(W,X,i))%*%test_theta)[true_base+1],"\n")
+# }
+
