@@ -1,5 +1,8 @@
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 157e2eb3e7243f4e2eb11fe60989c081947bbba2
 sgn<-function(W,X,row){
 	# W is the weight matrix
 	# x is one row of the the innput matrix
@@ -295,3 +298,4 @@ sum(res_c$non_greedy_loss<res_c$greedy_loss)/nrow(res_c)
 # 	true_base = as.numeric(X[i,ncol(X)])
 # 	cat(" probability of correct assignment = ",(f(sgn(W,X,i))%*%test_theta)[true_base+1],"\n")
 # }
+
