@@ -1,10 +1,10 @@
 
-
 sgn<-function(W,X,row){
 	# W is the weight matrix
 	# x is one row of the the innput matrix
 	# sgn is the m-bit m-bit vector of potential split decisions (h)
 	x = X[row,c(1:ncol(X)-1)]
+	# x<-as.matrix(x)
 	out_mat = W %*% x -1
 	sign  = sign(out_mat)
 	return(sign)}
@@ -14,10 +14,19 @@ f <- function(h){
 	# an m-bit vector of potential split decisions (h)
 	# function returns: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
-	h[h==-1]<-0
-	h<-list(h[1],h[2:3])
 	
-	# TODO: Rewrite this^ so it works for a longer m decision tree
+	h[h==-1]<-0
+	i=1
+	l<-c(h[1])
+
+	while(i<length(h)){
+		from<-i
+		upto<- i*2
+		cat(from," ",upto,"\n")
+		l<-append(l,list(h[from:upto]))
+		i=i*2 +1
+	}
+	h<- l
 
 	# find number of rows from input
 	N <- length(h)
@@ -234,35 +243,60 @@ non_greedy<-function(theta,W,tau,alpha,v){
 }
 
 
+X<-read.csv2('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-as.matrix(X)
 
-X = matrix(
-	c(2.771244718,1.784783929,0,
-		1.728571309,1.169761413,0,
-		3.678319846,2.81281357,0,
-		3.961043357,2.61995032,0,
-		2.999208922,2.209014212,0,
-		7.497545867,3.162953546,1,
-		9.00220326,3.339047188,1,
-		7.444542326,0.476683375,1,
-		10.12493903,3.234550982,1,
-		6.642287351,3.319983761,1),
-	nrow=10,
-	ncol=3,
-	byrow=TRUE)
+# X = matrix(
+# 	c(2.771244718,1.784783929,0,
+# 		1.728571309,1.169761413,0,
+# 		3.678319846,2.81281357,0,
+# 		3.961043357,2.61995032,0,
+# 		2.999208922,2.209014212,0,
+# 		7.497545867,3.162953546,1,
+# 		9.00220326,3.339047188,1,
+# 		7.444542326,0.476683375,1,
+# 		10.12493903,3.234550982,1,
+# 		6.642287351,3.319983761,1),
+# 	nrow=10,
+# 	ncol=3,
+# 	byrow=TRUE)
 
+initialize_theta<-function(X,depth){
+	if(missing(depth)){
+		depth=ncol(X)-1
+	}
+	theta<- matrix(c(runif(2*depth**2)),nrow=depth**2,ncol=2,byrow=T)
+	theta<-update_theta(theta)
+	return(theta)
+}
 
-theta<-matrix(c(
-				0.01,0.35,
-				0.55,0.45,
-				0.45,0.55,
-				0.35,0.65
-				),nrow=4,ncol=2,byrow=TRUE)
-w = c(3,-2,3)
-# w = c(-0.6,0.15,.5) OPTIMAL
-col = ncol(X)-1
-W = rep(w,col)
-W = matrix(W,nrow=length(w),ncol=col)
+# theta<-matrix(c(
+# 				0.65,0.35,
+# 				0.55,0.45,
+# 				0.45,0.55,
+# 				0.35,0.65
+# 				),nrow=4,ncol=2,byrow=TRUE)
 
+initialize_weights<-function(X,depth){
+# 	initialize a matrix of m (nodes) by X-1 cols
+	if(missing(depth)){
+		depth<-0
+		i<-1
+		while(i<=ncol(X)-1){
+			depth=depth+2**i
+			i=i+1
+		}
+	}
+	W<-matrix(c(runif(depth*(ncol(X)-1))),nrow=depth,ncol=(ncol(X)-1),byrow=T)
+	return(W)
+}
+
+# w = c(3,-2,3)
+# col = ncol(X)-1
+# W = rep(w,col)
+# W = matrix(W,nrow=length(w),ncol=col)
+W<-initialize_weights(X)
+theta<-initialize_theta(X)
 tau = 80
 batch = 3
 alpha = 0.01 # learning rate
@@ -278,7 +312,7 @@ for(tau in seq(0,100,2)){
 	ng_loss<- total_loss(out$theta,out$W)
 	ng_tau<- 2*tau
 	results<-rbind(results,c(g_tau,g_loss,ng_tau,ng_loss))
-	cat(g_tau," ",g_loss," ",ng_tau," ",ng_loss,"\n")
+	# cat(g_tau," ",g_loss," ",ng_tau," ",ng_loss,"\n")
 }
 names(results)<-c('g_tau','greedy_loss','ng_tau','ng_loss')
 res_a<-results[c('g_tau','greedy_loss')]
