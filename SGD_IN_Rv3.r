@@ -1,11 +1,11 @@
+library(gtools)
 
 sgn<-function(W,X,row){
 	# W is the weight matrix
 	# x is one row of the the innput matrix
 	# sgn is the m-bit m-bit vector of potential split decisions (h)
 	x = X[row,c(1:ncol(X)-1)]
-	# x<-as.matrix(x)
-	out_mat = W %*% x -1
+	out_mat = t(W) %*% x -1
 	sign  = sign(out_mat)
 	return(sign)}
 
@@ -14,33 +14,24 @@ f <- function(h){
 	# an m-bit vector of potential split decisions (h)
 	# function returns: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
-	
+
+	h<-c(0,0,0)
 	h[h==-1]<-0
-	i=1
 	l<-c(h[1])
+	i=1
+	while(i<=length(h)){
+		n_i<- 2*i+h[i]
+		i<-n_i
+		l<-append(l,list(h[i]))
+		}
+	
+	j<-0
+	while(2**j<= i){
+		j=j+1
+		}
+	out_pos<-  i - 2**(j-1) +1 
 
-	while(i<length(h)){
-		from<-i
-		upto<- i*2
-		cat(from," ",upto,"\n")
-		l<-append(l,list(h[from:upto]))
-		i=i*2 +1
-	}
-	h<- l
-
-	# find number of rows from input
-	N <- length(h)
-
-	# go through and pick out the values in each tree that are valid based
-	# on previous route
-	out <- c(h[[1]], rep(0, N-1))
-	for(i in 2:N){
-	out[i] <- h[[i]][sum(out[i:(i-1)] * 2^(i-1)/(2^((i-1):1))) + 1]
-	}
-
-	# now find the final position in the bottom row and return as a vector
-	out_pos <- sum(out * 2^N/(2^(1:N))) + 1
-	full_vec <- rep(0, 2^N)
+	full_vec <- rep(0, length(h)+1)
 	full_vec[out_pos] <- 1
 
 	return(full_vec)
@@ -54,7 +45,7 @@ loss<-function(X,samp_row,theta,g){
 	# function returns: 
 	# log loss value
 	true_base = as.numeric(X[samp_row,ncol(X)])
-	probs<-t(theta)%*%f(g)
+	probs<- t(theta) %*%f(g)
 	prob<-probs[2]
 	log_loss = - (sum(true_base * log(prob) + (1 - true_base) * log(1 - prob))) / length(true_base)
 	return(log_loss)
@@ -74,19 +65,21 @@ objective<-function(W,X,theta,samp_row){
 	# dataset (X)
 	# theta vector
 	# function returns the argument (g) that maximize the expression: 
-	library(gtools)
-	gs <-permutations(2,3,c(-1,1),repeats.allowed=T)
+	
+	width<-dim(W)[2]
+	gs <-permutations(2,width,c(-1,1),repeats.allowed=T)
 	for(row in c(1:nrow(gs))) {
+		
 		g<-gs[row,]
 		x<-X[samp_row,c(1:ncol(X)-1)]
-		first_term = g %*% W %*% x
+		first_term = g %*% t(W) %*% x
 		u_p <-update_theta(theta)
 		second_term = loss(X,samp_row,u_p,g)
 		# func<-first_term+second_term
 		func<-second_term
-		# cat(paste(first_term,second_term,"\n"))
-		# cat(g)
-		# cat("\n")
+		cat(paste(first_term,second_term,"\n"))
+		cat(g)
+		cat("\n")
 		if(exists("argmax")){
 			if(func<argmax){
 				argmax<-func
@@ -110,8 +103,8 @@ objective_verbatum<-function(W,X,theta,samp_row){
 	# dataset (X)
 	# theta vector
 	# function returns the argument (g) that maximize the expression: 
-	library(gtools)
-	gs <-permutations(2,3,c(-1,1),repeats.allowed=T)
+	width<-dim(W)[2]
+	gs <-permutations(2,width,c(-1,1),repeats.allowed=T)
 	second_max<-0
 	first_max<-0
 	for(row in c(1:nrow(gs))) {
@@ -144,6 +137,7 @@ update_theta<-function(theta){
 	# an 1 by k length matrix of probabilities
 	# function returns: 
 	# an m+1 by k matrix of softmax processed probabilities of p(y= l|j)	
+	# theta<-t(theta)
 	if(!is.null(nrow(theta))){
 		for (i in seq(1,nrow(theta))){
 			theta_vec<-theta[i,]
@@ -162,13 +156,15 @@ total_loss<-function(theta,W){
 	total_loss<-0
 	for(i in seq(1,10)){
 		true_base = as.numeric(X[i,ncol(X)])
-		total_loss = total_loss + 1- (f(sgn(W,X,i))%*%test_theta)[true_base+1]
+		total_loss = total_loss + 1- (f(sgn(W,X,i))%*%(test_theta))[true_base+1]
+		cat(true_base," ",f(sgn(W,X,i))," ",(f(sgn(W,X,i))%*%(test_theta))[true_base+1],"\n")
 	}
 		return(total_loss)
 }
 
 
 greedy<-function(theta,W,tau,alpha,v){
+	cols<-dim(X)[2]-1
 	for(t in seq(0,tau)){
 		samp_row <-sample(1:nrow(X),1)
 		# current path
@@ -176,7 +172,8 @@ greedy<-function(theta,W,tau,alpha,v){
 
 		# optimal path based on cost function (not on the other term)
 		g = objective(W,X,theta,samp_row)
-		W = W+ (alpha*(g-h)%*%t(X[samp_row,0:col]))
+		
+		W = W + t((alpha*(g-h)%*%t(X[samp_row,0:cols])))
 
 	for(i in seq(1,nrow(W))) {
 		a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
@@ -194,7 +191,7 @@ greedy<-function(theta,W,tau,alpha,v){
 		}
 	# Gradient Version with Partial Derivative
 	gradient = loss_prime(probs)
-	theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
+	theta[r,] = theta[r,] - alpha* update_theta(gradient)
 	}
 	ret <-list("theta" = theta, "W"=W)
 	return(ret)
@@ -202,6 +199,7 @@ greedy<-function(theta,W,tau,alpha,v){
 
 
 non_greedy<-function(theta,W,tau,alpha,v){
+	cols<-dim(X)[2]-1
 	for(t in seq(0,tau)){
 		samp_row <-sample(1:nrow(X),1)
 		# current path
@@ -212,7 +210,7 @@ non_greedy<-function(theta,W,tau,alpha,v){
 		g_o = objective(W,X,theta,samp_row)
 		W = W 
 			# + (alpha*(g_o-h)%*%t(X[samp_row,0:col]))
-			- (alpha*(g_v-h)%*%t(X[samp_row,0:col]))
+			- t(alpha*(g_v-h)%*%t(X[samp_row,0:cols]))
 		# g-h is worst
 		# h-g is best
 		# g = objective(W,X,theta,samp_row)
@@ -235,7 +233,7 @@ non_greedy<-function(theta,W,tau,alpha,v){
 
 	# Gradient Version with Partial Derivative
 	gradient = loss_prime(probs)
-	theta[r,] = theta[r,] - alpha* t(update_theta(gradient))
+	theta[r,] = theta[r,] - alpha* update_theta(gradient)
 
 	}
 	ret <-list("theta" = theta, "W"=W)
@@ -243,29 +241,40 @@ non_greedy<-function(theta,W,tau,alpha,v){
 }
 
 
-X<-read.csv2('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-as.matrix(X)
+# X<-read.csv2('C:\\users\\larriva\\desktop\\banknotes_small.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-as.matrix(X)
 
-# X = matrix(
-# 	c(2.771244718,1.784783929,0,
-# 		1.728571309,1.169761413,0,
-# 		3.678319846,2.81281357,0,
-# 		3.961043357,2.61995032,0,
-# 		2.999208922,2.209014212,0,
-# 		7.497545867,3.162953546,1,
-# 		9.00220326,3.339047188,1,
-# 		7.444542326,0.476683375,1,
-# 		10.12493903,3.234550982,1,
-# 		6.642287351,3.319983761,1),
-# 	nrow=10,
-# 	ncol=3,
-# 	byrow=TRUE)
+X = matrix(
+	c(2.771244718,1.784783929,0,
+		1.728571309,1.169761413,0,
+		3.678319846,2.81281357,0,
+		3.961043357,2.61995032,0,
+		2.999208922,2.209014212,0,
+		7.497545867,3.162953546,1,
+		9.00220326,3.339047188,1,
+		7.444542326,0.476683375,1,
+		10.12493903,3.234550982,1,
+		6.642287351,3.319983761,1),
+	nrow=10,
+	ncol=3,
+	byrow=TRUE)
 
 initialize_theta<-function(X,depth){
+#	function takes: 
+# 		X the train data
+# 		an optional depth which is the number of leaves (m+1) or a specified depth if 
+# 			not using the full depth of tree. Depth must be of 2**n value (1,2,4,8...)
+
 	if(missing(depth)){
-		depth=ncol(X)-1
+		depth<-0
+		i<-0
+		while(i<=ncol(X)-1){
+			depth=depth+2**i
+			i=i+1
+		}
+		depth<-depth-dim(X)[2]
 	}
-	theta<- matrix(c(runif(2*depth**2)),nrow=depth**2,ncol=2,byrow=T)
+	theta<- matrix(c(runif(2*depth**2)),nrow=depth,ncol=2,byrow=T)
 	theta<-update_theta(theta)
 	return(theta)
 }
@@ -280,15 +289,15 @@ initialize_theta<-function(X,depth){
 initialize_weights<-function(X,depth){
 # 	initialize a matrix of m (nodes) by X-1 cols
 	if(missing(depth)){
-		depth<-0
+		depth<-1
 		i<-1
-		while(i<=ncol(X)-1){
+		while(i<ncol(X)-1){
 			depth=depth+2**i
 			i=i+1
 		}
 	}
 	W<-matrix(c(runif(depth*(ncol(X)-1))),nrow=depth,ncol=(ncol(X)-1),byrow=T)
-	return(W)
+	return(t(W))
 }
 
 # w = c(3,-2,3)
@@ -299,20 +308,19 @@ W<-initialize_weights(X)
 theta<-initialize_theta(X)
 tau = 80
 batch = 3
-alpha = 0.01 # learning rate
+alpha = .01 # learning rate
 v = 02 # regularization parameter
 
-
 results<-data.frame(g_tau=integer(),greedy_loss=double(),ng_tau=double(),ng_loss=double())
-for(tau in seq(0,100,2)){
+for(tau in seq(0,300,100)){
 	out<-greedy(theta,W,tau,alpha,v)
 	g_loss<- total_loss(out$theta,out$W)
 	g_tau<- tau
-	out<-non_greedy(out$theta,out$W,tau,alpha,v)
-	ng_loss<- total_loss(out$theta,out$W)
-	ng_tau<- 2*tau
-	results<-rbind(results,c(g_tau,g_loss,ng_tau,ng_loss))
-	# cat(g_tau," ",g_loss," ",ng_tau," ",ng_loss,"\n")
+	# out<-non_greedy(out$theta,out$W,tau,alpha,v)
+	# ng_loss<- total_loss(out$theta,out$W)
+	# ng_tau<- 2*tau
+	# results<-rbind(results,c(g_tau,g_loss,ng_tau,ng_loss))
+	cat(g_tau," ",g_loss," ",ng_tau," ",ng_loss,"\n")
 }
 names(results)<-c('g_tau','greedy_loss','ng_tau','ng_loss')
 res_a<-results[c('g_tau','greedy_loss')]
