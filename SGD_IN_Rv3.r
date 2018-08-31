@@ -14,8 +14,6 @@ f <- function(h){
 	# an m-bit vector of potential split decisions (h)
 	# function returns: 
 	# an m+1-length one-hot indicator vector, which is only non-zero at the index of the selected leaf
-
-	h<-c(0,0,0)
 	h[h==-1]<-0
 	l<-c(h[1])
 	i=1
@@ -47,6 +45,7 @@ loss<-function(X,samp_row,theta,g){
 	true_base = as.numeric(X[samp_row,ncol(X)])
 	probs<- t(theta) %*%f(g)
 	prob<-probs[2]
+	# cat(f(g)," ",prob,"\n")
 	log_loss = - (sum(true_base * log(prob) + (1 - true_base) * log(1 - prob))) / length(true_base)
 	return(log_loss)
 }
@@ -67,26 +66,22 @@ objective<-function(W,X,theta,samp_row){
 	# function returns the argument (g) that maximize the expression: 
 	
 	width<-dim(W)[2]
+	u_p <-update_theta(theta)
+	argmax<- 5e10
 	gs <-permutations(2,width,c(-1,1),repeats.allowed=T)
 	for(row in c(1:nrow(gs))) {
 		
 		g<-gs[row,]
 		x<-X[samp_row,c(1:ncol(X)-1)]
 		first_term = g %*% t(W) %*% x
-		u_p <-update_theta(theta)
+
 		second_term = loss(X,samp_row,u_p,g)
 		# func<-first_term+second_term
 		func<-second_term
-		cat(paste(first_term,second_term,"\n"))
-		cat(g)
-		cat("\n")
-		if(exists("argmax")){
-			if(func<argmax){
-				argmax<-func
-				argmax_row<-row
-			}
-
-		}	else{
+		# cat(paste(row,first_term,second_term,"\n"))
+		# cat(g)
+		# cat("\n")
+		if(func<argmax){
 			argmax<-func
 			argmax_row<-row
 			}
@@ -104,6 +99,7 @@ objective_verbatum<-function(W,X,theta,samp_row){
 	# theta vector
 	# function returns the argument (g) that maximize the expression: 
 	width<-dim(W)[2]
+	u_p <-update_theta(theta)
 	gs <-permutations(2,width,c(-1,1),repeats.allowed=T)
 	second_max<-0
 	first_max<-0
@@ -112,7 +108,6 @@ objective_verbatum<-function(W,X,theta,samp_row){
 		x<-X[samp_row,c(1:ncol(X)-1)]
 
 		first_term = sum((sgn(W,X,samp_row) - g)^2)
-		u_p <-update_theta(theta)
 		second_term = loss(X,samp_row,u_p,g)
 		# cat(row," ",first_term," ",second_term," ",g,"\n")
 		val <- first_term+second_term
@@ -157,7 +152,7 @@ total_loss<-function(theta,W){
 	for(i in seq(1,10)){
 		true_base = as.numeric(X[i,ncol(X)])
 		total_loss = total_loss + 1- (f(sgn(W,X,i))%*%(test_theta))[true_base+1]
-		cat(true_base," ",f(sgn(W,X,i))," ",(f(sgn(W,X,i))%*%(test_theta))[true_base+1],"\n")
+		# cat(true_base," ",f(sgn(W,X,i))," ",(f(sgn(W,X,i))%*%(test_theta))[true_base+1],"\n")
 	}
 		return(total_loss)
 }
@@ -209,7 +204,7 @@ non_greedy<-function(theta,W,tau,alpha,v){
 		g_v = objective_verbatum(W,X,theta,samp_row)
 		g_o = objective(W,X,theta,samp_row)
 		W = W 
-			# + (alpha*(g_o-h)%*%t(X[samp_row,0:col]))
+			+ t(alpha*(g_o-h)%*%t(X[samp_row,0:cols]))
 			- t(alpha*(g_v-h)%*%t(X[samp_row,0:cols]))
 		# g-h is worst
 		# h-g is best
@@ -241,23 +236,24 @@ non_greedy<-function(theta,W,tau,alpha,v){
 }
 
 
-# X<-read.csv2('C:\\users\\larriva\\desktop\\banknotes_small.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-as.matrix(X)
+X<-read.csv2('C:\\users\\matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-X[,c(1,2,3,5)]
+X<-as.matrix(X)
 
-X = matrix(
-	c(2.771244718,1.784783929,0,
-		1.728571309,1.169761413,0,
-		3.678319846,2.81281357,0,
-		3.961043357,2.61995032,0,
-		2.999208922,2.209014212,0,
-		7.497545867,3.162953546,1,
-		9.00220326,3.339047188,1,
-		7.444542326,0.476683375,1,
-		10.12493903,3.234550982,1,
-		6.642287351,3.319983761,1),
-	nrow=10,
-	ncol=3,
-	byrow=TRUE)
+# X = matrix(
+# 	c(2.771244718,1.784783929,0,
+# 		1.728571309,1.169761413,0,
+# 		3.678319846,2.81281357,0,
+# 		3.961043357,2.61995032,0,
+# 		2.999208922,2.209014212,0,
+# 		7.497545867,3.162953546,1,
+# 		9.00220326,3.339047188,1,
+# 		7.444542326,0.476683375,1,
+# 		10.12493903,3.234550982,1,
+# 		6.642287351,3.319983761,1),
+# 	nrow=10,
+# 	ncol=3,
+# 	byrow=TRUE)
 
 initialize_theta<-function(X,depth){
 #	function takes: 
@@ -268,11 +264,11 @@ initialize_theta<-function(X,depth){
 	if(missing(depth)){
 		depth<-0
 		i<-0
-		while(i<=ncol(X)-1){
+		while(i<ncol(X)-1){
 			depth=depth+2**i
 			i=i+1
 		}
-		depth<-depth-dim(X)[2]
+		depth<-depth+1
 	}
 	theta<- matrix(c(runif(2*depth**2)),nrow=depth,ncol=2,byrow=T)
 	theta<-update_theta(theta)
@@ -292,7 +288,7 @@ initialize_weights<-function(X,depth){
 		depth<-1
 		i<-1
 		while(i<ncol(X)-1){
-			depth=depth+2**i
+			depth =depth+2**i
 			i=i+1
 		}
 	}
@@ -306,21 +302,27 @@ initialize_weights<-function(X,depth){
 # W = matrix(W,nrow=length(w),ncol=col)
 W<-initialize_weights(X)
 theta<-initialize_theta(X)
-tau = 80
-batch = 3
-alpha = .01 # learning rate
+alpha = 0.1 # learning rate
 v = 02 # regularization parameter
 
 results<-data.frame(g_tau=integer(),greedy_loss=double(),ng_tau=double(),ng_loss=double())
-for(tau in seq(0,300,100)){
+for(tau in seq(0,100,10)){
 	out<-greedy(theta,W,tau,alpha,v)
 	g_loss<- total_loss(out$theta,out$W)
 	g_tau<- tau
-	# out<-non_greedy(out$theta,out$W,tau,alpha,v)
-	# ng_loss<- total_loss(out$theta,out$W)
-	# ng_tau<- 2*tau
-	# results<-rbind(results,c(g_tau,g_loss,ng_tau,ng_loss))
-	cat(g_tau," ",g_loss," ",ng_tau," ",ng_loss,"\n")
+	out<-non_greedy(out$theta,out$W,tau,alpha,v)
+	ng_loss<- total_loss(out$theta,out$W)
+	ng_tau<- 2*tau
+	results<-rbind(results,c(g_tau,g_loss,ng_tau,ng_loss))
+	cat(
+		g_tau
+		," "
+		,g_loss
+		," "
+		,ng_tau
+		," "
+		,ng_loss
+		,"\n")
 }
 names(results)<-c('g_tau','greedy_loss','ng_tau','ng_loss')
 res_a<-results[c('g_tau','greedy_loss')]
