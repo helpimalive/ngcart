@@ -68,23 +68,25 @@ objective<-function(W,X,theta,samp_row){
 	width<-dim(W)[2]
 	u_p <-update_theta(theta)
 	argmax<- 5e10
+	memo<-list()
 	gs <-permutations(2,width,c(-1,1),repeats.allowed=T)
 	for(row in c(1:nrow(gs))) {
-		
 		g<-gs[row,]
-		x<-X[samp_row,c(1:ncol(X)-1)]
-		first_term = g %*% t(W) %*% x
-
-		second_term = loss(X,samp_row,u_p,g)
-		# func<-first_term+second_term
-		func<-second_term
-		# cat(paste(row,first_term,second_term,"\n"))
-		# cat(g)
-		# cat("\n")
-		if(func<argmax){
-			argmax<-func
-			argmax_row<-row
-			}
+		if(!(list(f(g)) %in% memo)){ 		
+			x<-X[samp_row,c(1:ncol(X)-1)]
+			first_term = g %*% t(W) %*% x
+			second_term = loss(X,samp_row,u_p,g)
+			# func<-first_term+second_term
+			func<-second_term
+			# cat(paste(row,first_term,second_term,"\n"))
+			# cat(g)
+			# cat("\n")
+			if(func<argmax){
+				argmax<-func
+				argmax_row<-row
+				}
+			memo<-append(memo,list(f(g)))
+		}
 	}
 
 	return(gs[argmax_row,])
@@ -100,11 +102,13 @@ objective_verbatum<-function(W,X,theta,samp_row){
 	# function returns the argument (g) that maximize the expression: 
 	width<-dim(W)[2]
 	u_p <-update_theta(theta)
+	memo<-list()
 	gs <-permutations(2,width,c(-1,1),repeats.allowed=T)
 	second_max<-0
 	first_max<-0
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
+		if(!(list(f(g)) %in% memo)){ 		
 		x<-X[samp_row,c(1:ncol(X)-1)]
 
 		first_term = sum((sgn(W,X,samp_row) - g)^2)
@@ -121,6 +125,8 @@ objective_verbatum<-function(W,X,theta,samp_row){
 				second_max<-second_term
 				first_max<-first_term
 			} 
+			memo<-append(memo,list(f(g)))
+		}
 	}
 
 	return(gs[argmax_row,])
@@ -235,26 +241,6 @@ non_greedy<-function(theta,W,tau,alpha,v){
 	return(ret)
 }
 
-
-X<-read.csv2('C:\\users\\matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-X[,c(1,2,3,5)]
-X<-as.matrix(X)
-
-# X = matrix(
-# 	c(2.771244718,1.784783929,0,
-# 		1.728571309,1.169761413,0,
-# 		3.678319846,2.81281357,0,
-# 		3.961043357,2.61995032,0,
-# 		2.999208922,2.209014212,0,
-# 		7.497545867,3.162953546,1,
-# 		9.00220326,3.339047188,1,
-# 		7.444542326,0.476683375,1,
-# 		10.12493903,3.234550982,1,
-# 		6.642287351,3.319983761,1),
-# 	nrow=10,
-# 	ncol=3,
-# 	byrow=TRUE)
-
 initialize_theta<-function(X,depth){
 #	function takes: 
 # 		X the train data
@@ -296,17 +282,40 @@ initialize_weights<-function(X,depth){
 	return(t(W))
 }
 
+
+X<-read.csv2('C:\\users\\matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-X[,c(1,2,3,5)]
+X<-as.matrix(X)
+
+# X = matrix(
+# 	c(2.771244718,1.784783929,0,
+# 		1.728571309,1.169761413,0,
+# 		3.678319846,2.81281357,0,
+# 		3.961043357,2.61995032,0,
+# 		2.999208922,2.209014212,0,
+# 		7.497545867,3.162953546,1,
+# 		9.00220326,3.339047188,1,
+# 		7.444542326,0.476683375,1,
+# 		10.12493903,3.234550982,1,
+# 		6.642287351,3.319983761,1),
+# 	nrow=10,
+# 	ncol=3,
+# 	byrow=TRUE)
+
+
 # w = c(3,-2,3)
 # col = ncol(X)-1
 # W = rep(w,col)
 # W = matrix(W,nrow=length(w),ncol=col)
 W<-initialize_weights(X)
 theta<-initialize_theta(X)
-alpha = 0.1 # learning rate
+alpha = 0.01 # learning rate
 v = 02 # regularization parameter
 
 results<-data.frame(g_tau=integer(),greedy_loss=double(),ng_tau=double(),ng_loss=double())
 for(tau in seq(0,100,10)){
+	W<-initialize_weights(X)
+	theta<-initialize_theta(X)
 	out<-greedy(theta,W,tau,alpha,v)
 	g_loss<- total_loss(out$theta,out$W)
 	g_tau<- tau
