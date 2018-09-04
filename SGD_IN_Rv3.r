@@ -1,4 +1,45 @@
 library(gtools)
+library(rpart)
+
+########################
+### HELPER FUNCTIONS ###
+########################
+
+
+initialize_theta<-function(data,depth){
+	#	function takes: 
+	# 		the train data
+	# 		an optional depth which is the number of leaves (m+1) or a specified depth if 
+	# 			not using the full depth of tree. Depth must be of 2**n value (1,2,4,8...)
+
+	if(missing(depth)){
+		depth<-0
+		i<-0
+		while(i<ncol(data)-1){
+			depth=depth+2**i
+			i=i+1
+		}
+		depth<-depth+1
+	}
+	theta<- matrix(c(runif(2*depth**2)),nrow=depth,ncol=2,byrow=T)
+	theta<-update_theta(theta)
+	return(theta)
+}
+
+initialize_weights<-function(data,depth){
+# 	initialize a matrix of m (nodes) by data-1 cols
+	if(missing(depth)){
+		depth<-1
+		i<-1
+		while(i<ncol(data)-1){
+			depth =depth+2**i
+			i=i+1
+		}
+	}
+	W<-matrix(c(runif(depth*(ncol(data)-1),-10,10)),nrow=depth,ncol=(ncol(data)-1),byrow=T)
+	return(t(W))
+}
+
 
 sgn<-function(W,data,row){
 	# W is the weight matrix
@@ -35,6 +76,58 @@ f <- function(h){
 	return(full_vec)
 }
 
+#########################
+### TESTING FUNCTIONS ###
+#########################
+
+rpart_pred<-function(train_data,test_data){
+	train_data<-as.data.frame(train_data)
+	test_data<-as.data.frame(test_data)
+	fit<- rpart(base~c+b,data = train_data, method="class")
+	preds<-as.data.frame(predict(fit,newdata=test_data,type=c("class")))
+	names(preds)<-c('pred_val')
+	acc<-test_data$base==preds$pred_val
+	return(sum(acc)/length(acc))
+}
+
+
+total_loss<-function(theta,W,test_data){
+	test_theta<-update_theta(theta)
+	total_loss<-0
+	for(i in seq(1,nrow(test_data))){
+		true_base = as.numeric(test_data[i,ncol(test_data)])
+		total_loss = total_loss + 1 - (f(sgn(W,test_data,i))%*%(test_theta))[true_base+1]
+	}
+		return(total_loss)
+}
+
+accuracy<-function(theta,W,test_data){
+	test_theta<-update_theta(theta)
+	acc<-0
+	for(i in seq(1,nrow(test_data))){
+		true_base = as.numeric(test_data[i,ncol(test_data)])
+		predicted = grep(1,round((f(sgn(W,test_data,i))%*%(test_theta))))-1
+		if(true_base==predicted){
+			acc = acc+1
+		}
+	}
+	return(acc/nrow(test_data))
+}
+
+est<-function(theta,W,data){
+	test_theta<-update_theta(theta)
+	pred<-data.frame()
+	for(i in seq(1,nrow(test_data))){
+		predicted = grep(1,round((f(sgn(W,test_data,i))%*%(test_theta))))-1
+		pred<-rbind(pred,predicted)
+	}
+	return(pred)
+}
+
+
+#####################
+### TREE BUILDERS ###
+#####################
 
 loss<-function(data,samp_row,theta,g){
 	# function takes as arguments: 
@@ -67,26 +160,21 @@ objective<-function(W,data,theta,samp_row){
 	
 	width<-dim(W)[2]
 	argmax<- 5e10
-	memo<-list()
+	# memo<-list()
 	gs <-permutations(2,width,c(-1,1),repeats.allowed=T)
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
-		if(!(list(f(g)) %in% memo)){ 		
+		# if(!(list(f(g)) %in% memo)){ 		
 			x<-data[samp_row,c(1:ncol(data)-1)]
 			first_term = g %*% t(W) %*% x
 			u_p <-update_theta(theta)
 			second_term = loss(data,samp_row,u_p,g)
-			# func<-first_term+second_term
-			func<-second_term
-			# cat(paste(row,first_term,second_term,"\n"))
-			# cat(g)
-			# cat("\n")
-			if(func<argmax){
-				argmax<-func
+			if(second_term<argmax){
+				argmax<-second_term
 				argmax_row<-row
 				}
-			memo<-append(memo,list(f(g)))
-		}
+		# 	memo<-append(memo,list(f(g)))
+		# }
 	}
 
 	return(gs[argmax_row,])
@@ -107,7 +195,7 @@ objective_verbatum<-function(W,data,theta,samp_row){
 	first_max<-0
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
-		if(!(list(f(g)) %in% memo)){ 		
+		# if(!(list(f(g)) %in% memo)){ 		
 			x<-data[samp_row,c(1:ncol(data)-1)]
 			first_term = sum((sgn(W,data,samp_row) - g)^2)
 			u_p <-update_theta(theta)
@@ -119,8 +207,8 @@ objective_verbatum<-function(W,data,theta,samp_row){
 					second_max<-second_term
 					first_max<-first_term
 				} 
-			memo<-append(memo,list(f(g)))
-		}
+			# memo<-append(memo,list(f(g)))
+		# }
 	}
 	return(gs[argmax_row,])
 }
@@ -145,49 +233,24 @@ update_theta<-function(theta){
 	return(theta)
 }
 
-total_loss<-function(theta,W,test_data){
-	test_theta<-update_theta(theta)
-	total_loss<-0
-	for(i in seq(1,nrow(test_data))){
-		true_base = as.numeric(test_data[i,ncol(test_data)])
-		total_loss = total_loss + 1 - (f(sgn(W,test_data,i))%*%(test_theta))[true_base+1]
-		# cat(true_base," ",f(sgn(W,data,i))," ",(f(sgn(W,data,i))%*%(test_theta))[true_base+1],"\n")
-	}
-		return(total_loss)
-}
-
-accuracy<-function(theta,W,test_data){
-	test_theta<-update_theta(theta)
-	acc<-0
-	for(i in seq(1,nrow(test_data))){
-		true_base = as.numeric(test_data[i,ncol(test_data)])
-		predicted = grep(1,round((f(sgn(W,test_data,i))%*%(test_theta))))-1
-		if(true_base==predicted){
-			acc = acc+1
-		}
-	}
-	return(acc/nrow(test_data))
-}
-
 greedy<-function(theta,W,tau,alpha,v,train_data){
 	cols<-dim(train_data)[2]-1
-	for(t in seq(0,tau)){
-		samp_row <-sample(1:nrow(train_data),1)
+	for(t in seq(1,tau)){
+		# samp_row <-sample(1:nrow(train_data),1)
+		samp_row<-t
+		
 		# current path
 		h = sgn(W,train_data,samp_row) 
-		# cat("current path ",h,"\n")
-
 		# optimal path based on cost function (not on the other term)
 		g = objective(W,train_data,theta,samp_row)
-		# cat("optimal path ",g,"\n")
-
-		W = W + t((alpha*(g-h)%*%t(train_data[samp_row,0:cols])))
+		W = W + t((alpha*10*(g-h)%*%t(train_data[samp_row,0:cols])))
 
 		for(i in seq(1,nrow(W))) {
 			a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
 			W[i,]<-a
 			}
 
+		if(all(g==h)){
 		true_base = as.numeric(train_data[samp_row,ncol(train_data)])
 		r<-grep(1,f(sgn(W,train_data,samp_row)))
 		probs<-theta[r,]
@@ -197,174 +260,158 @@ greedy<-function(theta,W,tau,alpha,v,train_data){
 			} else {
 			true_probs<-c(1,0)
 			}
-		
-		# cat("current prob of correct ID ",probs[true_base+1],"\n")
 
 		# Gradient Version with Partial Derivative
 		gradient = loss_prime(probs)
-		theta[r,] = theta[r,] - alpha * (update_theta(t(gradient))-true_probs)
-		# cat("udpated prob of correct ID ",theta[r,true_base+1],"\n")
+		theta[r,] = theta[r,] - alpha * (update_theta(t(gradient))*(theta[r,]-true_probs))
+		theta[is.nan(theta)]=0.01
+		}
 	}
 	ret <-list("theta" = theta, "W"=W)
 	return(ret)
-	}
+}
 
 
 non_greedy<-function(theta,W,tau,alpha,v,train_data){
 	cols<-dim(train_data)[2]-1
-	for(t in seq(0,tau)){
-		samp_row <-sample(1:nrow(train_data),1)
+	for(t in seq(1,tau)){
+		# samp_row <-sample(1:nrow(train_data),1)
+		samp_row<-t
+
 		# current path
 		h = sgn(W,train_data,samp_row) 
 
 		# using the paper's loss-augmented inference
 		g_v = objective_verbatum(W,train_data,theta,samp_row)
 		g_o = objective(W,train_data,theta,samp_row)
-		W = W 
-			+ t(alpha*(g_o-h)%*%t(train_data[samp_row,0:cols]))
-			- t(alpha*(g_v-h)%*%t(train_data[samp_row,0:cols]))
-		# g-h is worst
-		# h-g is best
-		# g = objective(W,train_data,theta,samp_row)
-		# W = W+ (alpha*(g-h)%*%t(train_data[samp_row,0:col]))
+		W = (W 
+			# + t(alpha*(h)%*%t(train_data[samp_row,0:cols]))
+			+ t(alpha*10*(g_o-h)%*%t(train_data[samp_row,0:cols]))
+			- t(alpha*10*(g_v-g_o)%*%t(train_data[samp_row,0:cols]))
+			# + t(alpha*(g_v-g_o)%*%t(train_data[samp_row,0:cols]))
+			)
 
 	for(i in seq(1,nrow(W))) {
 		a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
 		W[i,]<-a
 		}
+	
+		true_base = as.numeric(train_data[samp_row,ncol(train_data)])
+		r<-grep(1,f(sgn(W,train_data,samp_row)))
+		probs<-theta[r,]
 
-	true_base = as.numeric(train_data[samp_row,ncol(train_data)])
-	r<-grep(1,f(sgn(W,train_data,samp_row)))
-	probs<-theta[r,]
+		if (true_base==1){
+			true_probs<-c(0,1)
+			} else {
+			true_probs<-c(1,0)
+			}
 
-	if (true_base==1){
-		true_probs<-c(0,1)
-		} else {
-		true_probs<-c(1,0)
-		}
-
-	# Gradient Version with Partial Derivative
-	gradient = loss_prime(probs)
-	theta[r,] = theta[r,] - alpha * (update_theta(t(gradient))-true_probs)
+		# Gradient Version with Partial Derivative
+		gradient = loss_prime(probs)
+		theta[r,] = theta[r,] - alpha * (update_theta(t(gradient))*(theta[r,]-true_probs))
+		theta[is.nan(theta)]=0.01
 
 	}
 	ret <-list("theta" = theta, "W"=W)
 	return(ret)
 }
 
-initialize_theta<-function(data,depth){
-#	function takes: 
-# 		data the train data
-# 		an optional depth which is the number of leaves (m+1) or a specified depth if 
-# 			not using the full depth of tree. Depth must be of 2**n value (1,2,4,8...)
-
-	if(missing(depth)){
-		depth<-0
-		i<-0
-		while(i<ncol(data)-1){
-			depth=depth+2**i
-			i=i+1
-		}
-		depth<-depth+1
-	}
-	theta<- matrix(c(runif(2*depth**2)),nrow=depth,ncol=2,byrow=T)
-	theta<-update_theta(theta)
-	return(theta)
-}
-
-# theta<-matrix(c(
-# 				0.65,0.35,
-# 				0.55,0.45,
-# 				0.45,0.55,
-# 				0.35,0.65
-# 				),nrow=4,ncol=2,byrow=TRUE)
-
-initialize_weights<-function(data,depth){
-# 	initialize a matrix of m (nodes) by data-1 cols
-	if(missing(depth)){
-		depth<-1
-		i<-1
-		while(i<ncol(data)-1){
-			depth =depth+2**i
-			i=i+1
-		}
-	}
-	W<-matrix(c(runif(depth*(ncol(data)-1))),nrow=depth,ncol=(ncol(data)-1),byrow=T)
-	return(t(W))
-}
 
 
-X<-read.csv2('C:\\users\\matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-X[,c(1,2,5)]
+X<-read.csv('C:\\users\\matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-X[,c(1,2,3,5)]
 X<-as.matrix(X)
 
-# data = matrix(
-# 	c(2.771244718,1.784783929,0,
-# 		1.728571309,1.169761413,0,
-# 		3.678319846,2.81281357,0,
-# 		3.961043357,2.61995032,0,
-# 		2.999208922,2.209014212,0,
-# 		7.497545867,3.162953546,1,
-# 		9.00220326,3.339047188,1,
-# 		7.444542326,0.476683375,1,
-# 		10.12493903,3.234550982,1,
-# 		6.642287351,3.319983761,1),
-# 	nrow=10,
-# 	ncol=3,
-# 	byrow=TRUE)
-
-
-# w = c(3,-2,3)
-# col = ncol(data)-1
-# W = rep(w,col)
-# W = matrix(W,nrow=length(w),ncol=col)
-
-
-train_index<-sample(nrow(X),nrow(X)*.8)
+train_index<-sample(nrow(X),nrow(X)*.10)
 train_data<-X[train_index,]
-test_data<-X[!(seq(1,nrow(X)) %in% train_index),]
+test_data<-X[-train_index,]
 
 W<-initialize_weights(train_data)
 theta<-initialize_theta(train_data)
-alpha = 0.05 # learning rate
-v = 02 # regularization parameter
+alpha = 0.001 # learning rate
+v = 0.75 # regularization parameter
+tau = dim(train_data)[1]
+iter = 5
 
 results<-data.frame(g_tau=integer(),greedy_acc=double(),ng_tau=double(),ng_acc=double())
-for(tau in seq(0,1000,100)){
-	W<-initialize_weights(train_data)
+forrest_ng_preds<-data.frame()
+forrest_gr_preds<-data.frame()
+
+for(it in seq(1,iter)){
+	train_index<-sample(nrow(X),nrow(X)*.20)
+	train_data<-X[train_index,]
+	test_data<-X[-train_index,]
+
+	# W<-initialize_weights(train_data)
+	i_weights<-apply(train_data[,1:(ncol(train_data)-1)],2,sd)
+	W<-matrix(rep(c(i_weights),7),nrow=3,ncol=7,byrow=F)
 	theta<-initialize_theta(train_data)
+	####GREEDY####
 	out<-greedy(theta,W,tau,alpha,v,train_data)
 	g_acc<- accuracy(out$theta,out$W,test_data)
-	g_loss<- total_loss(out$theta,out$W,test_data)
-	g_tau<- tau
+	if(it==1){
+		forrest_gr_preds = est(out$theta,out$W,test_data)
+	} else{ 
+		forrest_gr_preds <-cbind(forrest_gr_preds,est(out$theta,out$W,test_data))
+	}
+	gr_running_acc= sum(round(rowMeans(forrest_gr_preds))==test_data[,dim(test_data)[2]])/nrow(test_data)
+
+	####NONGREEDY####
 	out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
 	ng_acc<- accuracy(out$theta,out$W,test_data)
-	ng_tau<- 2*tau
-	results<-rbind(results,c(g_tau,g_acc,ng_tau,ng_acc))
+	if(it==1){
+		forrest_ng_preds = est(out$theta,out$W,test_data)
+	} else{ 
+		forrest_ng_preds<-cbind(forrest_ng_preds,est(out$theta,out$W,test_data))
+	}
+	ng_running_acc= sum(round(rowMeans(forrest_ng_preds))==test_data[,dim(test_data)[2]])/nrow(test_data)
+	
 	cat(
-		g_tau
+		"\n"
+		,tau
 		," "
 		,g_acc
 		," "
-		,ng_tau
+		# ,gr_running_acc
 		," "
 		,ng_acc
+		," "
+		# ,ng_running_acc
 		,"\n")
 }
-names(results)<-c('g_tau','greedy_acc','ng_tau','ng_acc')
-res_a<-results[c('g_tau','greedy_acc')]
-names(res_a)<-c('tau','greedy_acc')
-res_b<-results[c('ng_tau','ng_acc')]
-names(res_b)<-c('tau','non_greedy_acc')
-res_c<- merge(res_a,res_b)
-sum(res_c$non_greedy_acc>=res_c$greedy_acc)/nrow(res_c)
 
-# test_theta<-update_theta(theta)
-# test_theta<-update_theta(theta)
-# for(i in seq(1,10)){
-# 	cat("\n","predicted leaf =",f(sgn(W,data,i)),"\n")
-# 	# cat(W %*% data[i,0:col])
-# 	cat("probabilities at leaf= ",f(sgn(W,data,i))%*%test_theta,"\n")
-# 	true_base = as.numeric(data[i,ncol(data)])
-# 	cat(" probability of correct assignment = ",(f(sgn(W,data,i))%*%test_theta)[true_base+1],"\n")
-# }
+rpart_pred(train_data,test_data)
+# names(results)<-c('g_tau','greedy_acc','ng_tau','ng_acc')
+# res_a<-results[c('g_tau','greedy_acc')]
+# names(res_a)<-c('tau','greedy_acc')
+# res_b<-results[c('ng_tau','ng_acc')]
+# names(res_b)<-c('tau','non_greedy_acc')
+# res_c<- merge(res_a,res_b)
+# sum(res_c$non_greedy_acc>=res_c$greedy_acc)/nrow(res_c)
+
+for(i in seq(0,1000,100)){
+	out<-greedy(out$theta,out$W,i,alpha,v,train_data)
+	g_acc<- accuracy(out$theta,out$W,train_data)
+	cat(i,g_acc,"\n")
+}
+
+
+
+train_index<-sample(nrow(X),nrow(X)*.25)
+train_data<-X[train_index,]
+test_data<-X[-train_index,]
+
+W<-initialize_weights(train_data)
+i_weights<-apply(train_data[,1:(ncol(train_data)-1)],2,sd)
+W<-matrix(rep(c(i_weights),7),nrow=3,ncol=7,byrow=F)
+theta<-initialize_theta(train_data)
+alpha<-0.001
+colMeans(train_data)
+rowMeans(W)
+tau = dim(train_data)[1]
+out<-greedy(theta,W,tau,alpha,v,train_data)
+g_acc<- accuracy(out$theta,out$W,test_data)
+cat(g_acc,"\n")
+out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
+g_acc<- accuracy(out$theta,out$W,test_data)
+cat(g_acc,"\n")
