@@ -272,8 +272,8 @@ update_theta<-function(theta){
 greedy<-function(theta,W,tau,alpha,v,train_data,exhaustive){
 	cols<-dim(train_data)[2]-1
 	for(t in seq(1,tau)){
-		samp_row <-sample(1:nrow(train_data),1)
-		# samp_row<-t
+		# samp_row <-sample(1:nrow(train_data),1)
+		samp_row<-t
 		
 		# current path
 		h = sgn(W,train_data,samp_row) 
@@ -359,7 +359,8 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 #############
 ##BANKNOTES##
 #############
-X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 X<-as.matrix(X)
 names(X)<-c('a','b','c','d','base')
 results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
@@ -381,6 +382,34 @@ X<-X[,c("a","b","c","d","base")]
 # cols<-sample(colnames(X),4)
 # which_cols<-cols
 # X<-X[,c(cols,"base")]
+
+
+###############
+## OCCUPANCY ##
+###############
+X<-read.csv('C:\\users\\mlarriva\\desktop\\occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\mlarriva\\desktop\\mini_occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-as.matrix(X)
+names(X)<-c('a','b','c','d','e','base')
+results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+results<-rbind(results,c('greedy','non_greedy','rpart'))
+results<-results[-1,]
+which_cols<-c("a","b","c","d","e")
+X<-X[,c("a","b","c","d","e","base")]
+
+###############
+## CANCER    ##
+###############
+X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-as.matrix(X)
+names(X)<-c('a','b','c','d','base')
+results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+results<-rbind(results,c('greedy','non_greedy','rpart'))
+results<-results[-1,]
+which_cols<-c("a","b","c","d","e")
+X<-X[,c(which_cols,"base")]
+
+
 
 depth<-0
 i<-0
@@ -404,22 +433,22 @@ for(case in seq(1,10)){
 	g_acc<- accuracy(out$theta,out$W,test_data)
 	rpart<-rpart_pred(train_data,test_data,which_cols)
 
-	alpha<-0.01	
+	alpha<-0.5	
 	it<-1
 	ng_acc<-0
+	old_acc<-0
 		while(it<=10 
 			# & ng_acc<=rpart
 			 ){
-			out<-non_greedy(out$theta,out$W,tau/3,alpha,v,train_data)
-			ng_acc<- accuracy(out$theta,out$W,test_data)
+			out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
+			v<-v*1.5
 			alpha<-alpha/2
 			it<-it+1
-			if(it==10){
-				cat("\n",alpha,g_acc,ng_acc,rpart,ng_acc>rpart)
-			}
 		}
+	ng_acc<- accuracy(out$theta,out$W,test_data)
+	cat("\n",alpha,v,g_acc,ng_acc,rpart,ng_acc>=rpart)
 	results<-rbind(results,c(g_acc,ng_acc,rpart))
 }
 
-names(results)<-c('greedy','non_greedy','rpart')
-write.table(results, "c:/users/matth/desktop/5_C4results.txt",sep="\t")
+# names(results)<-c('greedy','non_greedy','rpart')
+# write.table(results, "c:/users/matth/desktop/5_C4results.txt",sep="\t")
