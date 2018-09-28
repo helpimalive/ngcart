@@ -389,7 +389,7 @@ while(i<ncol(X)-1){
 	i=i+1
 }
 
-for(case in seq(1,1)){
+for(case in seq(1,10)){
 	train_index<-sample(nrow(X),nrow(X)*.80)
 	train_data<-X[train_index,]
 	test_data<-X[-train_index,]
@@ -407,12 +407,16 @@ for(case in seq(1,1)){
 	alpha<-0.01	
 	it<-1
 	ng_acc<-0
-		while(it<15 & ng_acc<=rpart ){
+		while(it<=10 
+			# & ng_acc<=rpart
+			 ){
 			out<-non_greedy(out$theta,out$W,tau/3,alpha,v,train_data)
 			ng_acc<- accuracy(out$theta,out$W,test_data)
-			cat("\n",alpha,g_acc,ng_acc,rpart)
 			alpha<-alpha/2
 			it<-it+1
+			if(it==10){
+				cat("\n",alpha,g_acc,ng_acc,rpart,ng_acc>rpart)
+			}
 		}
 	results<-rbind(results,c(g_acc,ng_acc,rpart))
 }
