@@ -437,16 +437,15 @@ for(case in seq(1,10)){
 	it<-1
 	ng_acc<-0
 	old_acc<-0
-		while(it<=10 
-			# & ng_acc<=rpart
-			 ){
+	v<-mean(out$W)
+		while(it<=15 & ng_acc<rpart){
 			out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
+			ng_acc<- accuracy(out$theta,out$W,test_data)
+			cat("\n","iter",it,"alpha=",alpha,"v=",v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
 			v<-v*1.5
-			alpha<-alpha/2
+			alpha<-alpha/1.5
 			it<-it+1
 		}
-	ng_acc<- accuracy(out$theta,out$W,test_data)
-	cat("\n",alpha,v,g_acc,ng_acc,rpart,ng_acc>=rpart)
 	results<-rbind(results,c(g_acc,ng_acc,rpart))
 }
 
