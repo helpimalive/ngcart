@@ -360,14 +360,14 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ##BANKNOTES##
 #############
 # X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-as.matrix(X)
-names(X)<-c('a','b','c','d','base')
-results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-results<-rbind(results,c('greedy','non_greedy','rpart'))
-results<-results[-1,]
-which_cols<-c("a","b","c","d")
-X<-X[,c("a","b","c","d","base")]
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-as.matrix(X)
+# names(X)<-c('a','b','c','d','base')
+# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+# results<-rbind(results,c('greedy','non_greedy','rpart'))
+# results<-results[-1,]
+# which_cols<-c("a","b","c","d")
+# X<-X[,c("a","b","c","d","base")]
 
 #############
 ##CONNECT4 ##
@@ -386,9 +386,10 @@ X<-X[,c("a","b","c","d","base")]
 
 ###############
 ## OCCUPANCY ##
-###############
-X<-read.csv('C:\\users\\mlarriva\\desktop\\occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\mlarriva\\desktop\\mini_occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# ###############
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\mini_occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\matth\\desktop\\mini_occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 X<-as.matrix(X)
 names(X)<-c('a','b','c','d','e','base')
 results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
@@ -396,18 +397,20 @@ results<-rbind(results,c('greedy','non_greedy','rpart'))
 results<-results[-1,]
 which_cols<-c("a","b","c","d","e")
 X<-X[,c("a","b","c","d","e","base")]
-
+X[,which_cols]<-scale(X[,which_cols])
 ###############
 ## CANCER    ##
 ###############
-X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-as.matrix(X)
-names(X)<-c('a','b','c','d','base')
-results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-results<-rbind(results,c('greedy','non_greedy','rpart'))
-results<-results[-1,]
-which_cols<-c("a","b","c","d","e")
-X<-X[,c(which_cols,"base")]
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+
+# X<-as.matrix(X)
+# names(X)<-c('a','b','c','d','base')
+# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+# results<-rbind(results,c('greedy','non_greedy','rpart'))
+# results<-results[-1,]
+# which_cols<-c("a","b","c","d","e")
+# X<-X[,c(which_cols,"base")]
 
 
 
@@ -419,6 +422,7 @@ while(i<ncol(X)-1){
 }
 
 for(case in seq(1,10)){
+	
 	train_index<-sample(nrow(X),nrow(X)*.80)
 	train_data<-X[train_index,]
 	test_data<-X[-train_index,]
@@ -432,21 +436,28 @@ for(case in seq(1,10)){
 	out<-greedy(theta,W,tau,alpha,v,train_data)
 	g_acc<- accuracy(out$theta,out$W,test_data)
 	rpart<-rpart_pred(train_data,test_data,which_cols)
-
-	alpha<-0.5	
-	it<-1
+	alpha<-0.1
+	a_cycle<-0
 	ng_acc<-0
 	old_acc<-0
-	v<-mean(out$W)
-		while(it<=15 & ng_acc<rpart){
-			out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
-			ng_acc<- accuracy(out$theta,out$W,test_data)
-			cat("\n","iter",it,"alpha=",alpha,"v=",v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
-			v<-v*1.5
-			alpha<-alpha/1.5
-			it<-it+1
-		}
-	results<-rbind(results,c(g_acc,ng_acc,rpart))
+	v_cycle<-0
+	out$v<-abs(mean(out$W))
+	if(v<0.01){
+		v<-0.1
+	}
+	# while(v_cycle<=5){
+	# 	alpha<-0.1
+	while(a_cycle<=10 & ng_acc<=rpart){
+		out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
+		ng_acc<- accuracy(out$theta,out$W,test_data)
+		cat("\n","alpha=",alpha,"v=",v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
+		alpha<-alpha/2
+		a_cycle=a_cycle+1
+	}
+	# 	v<- v*2
+	# 	v_cycle= dv_cycle+1
+	# }
+	# results<-rbind(results,c(g_acc,ng_acc,rpart))
 }
 
 # names(results)<-c('greedy','non_greedy','rpart')
