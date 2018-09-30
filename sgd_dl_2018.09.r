@@ -360,7 +360,7 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ##BANKNOTES##
 #############
 # X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# # X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-as.matrix(X)
 # names(X)<-c('a','b','c','d','base')
 # results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
@@ -369,35 +369,10 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 # which_cols<-c("a","b","c","d")
 # X<-X[,c("a","b","c","d","base")]
 
-#############
-##CONNECT4 ##
-#############
+####
+## CODE BREAKS DOWN IN CASE OF SPARSE OR NON_CONTINUOUS DATA
+####
 
-# X<-read.csv('C:\\users\\matth\\documents\\connect4.csv',header=TRUE,sep=",",stringsAsFactors=T, dec=".")
-# X<-data.frame(X)
-# X<-data.matrix(X)
-# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-# results<-rbind(results,c('greedy','non_greedy','rpart'))
-# results<-results[-1,]
-# cols<-sample(colnames(X),4)
-# which_cols<-cols
-# X<-X[,c(cols,"base")]
-
-
-###############
-## OCCUPANCY ##
-# ###############
-# X<-read.csv('C:\\users\\mlarriva\\desktop\\occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-read.csv('C:\\users\\mlarriva\\desktop\\mini_occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\matth\\desktop\\mini_occupancy.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-as.matrix(X)
-names(X)<-c('a','b','c','d','e','base')
-results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-results<-rbind(results,c('greedy','non_greedy','rpart'))
-results<-results[-1,]
-which_cols<-c("a","b","c","d","e")
-X<-X[,c("a","b","c","d","e","base")]
-X[,which_cols]<-scale(X[,which_cols])
 ###############
 ## CANCER    ##
 ###############
@@ -423,9 +398,15 @@ while(i<ncol(X)-1){
 
 for(case in seq(1,10)){
 	
-	train_index<-sample(nrow(X),nrow(X)*.80)
-	train_data<-X[train_index,]
+	train_index<-sample(nrow(X),nrow(X)*0.80)
 	test_data<-X[-train_index,]
+
+	temp_train_data<-X[train_index,]
+	train_index<-sample(nrow(temp_train_data),nrow(temp_train_data)*0.8)
+	
+	train_data<-temp_train_data[train_index,]
+	validate_data<-temp_train_data[-train_index,]
+
 	i_weights<-apply(train_data[,1:(ncol(train_data)-1)],2,sd)
 	W<-matrix(rep(c(i_weights),depth),nrow=dim(X)[2]-1,ncol=depth,byrow=F)
 	# W<-matrix(rep(rep(40,length(i_weights)),depth),nrow=dim(X)[2]-1,ncol=depth,byrow=F)
@@ -434,31 +415,46 @@ for(case in seq(1,10)){
 	tau = dim(train_data)[1]
 	v<-mean(W)
 	out<-greedy(theta,W,tau,alpha,v,train_data)
-	g_acc<- accuracy(out$theta,out$W,test_data)
-	rpart<-rpart_pred(train_data,test_data,which_cols)
+	g_acc<- accuracy(out$theta,out$W,validate_data)
+	rpart<-rpart_pred(train_data,validate_data,which_cols)
+
 	alpha<-0.1
 	a_cycle<-0
 	ng_acc<-0
-	old_acc<-0
-	v_cycle<-0
-	out$v<-abs(mean(out$W))
+	ng_acc_max<-0
+
+
+	v2<-abs(mean(out$W))
 	if(v<0.01){
 		v<-0.1
 	}
-	# while(v_cycle<=5){
-	# 	alpha<-0.1
-	while(a_cycle<=10 & ng_acc<=rpart){
-		out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
-		ng_acc<- accuracy(out$theta,out$W,test_data)
-		cat("\n","alpha=",alpha,"v=",v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
-		alpha<-alpha/2
-		a_cycle=a_cycle+1
-	}
-	# 	v<- v*2
-	# 	v_cycle= dv_cycle+1
-	# }
-	# results<-rbind(results,c(g_acc,ng_acc,rpart))
-}
+	vs<-c(v,v2)
+	# THIS LINE BEATS BANKNOTES
+	# vs<-c(v)
+	# THIS LINE BEATS CANCER
+	# vs<-c(v2)
+	original_out<-out
+	for(v in vs){
+		out<-original_out
+		while(a_cycle<=10){
 
-# names(results)<-c('greedy','non_greedy','rpart')
-# write.table(results, "c:/users/matth/desktop/5_C4results.txt",sep="\t")
+			out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
+			ng_acc<- accuracy(out$theta,out$W,validate_data)
+			cat("\n","alpha=",alpha,"v=",v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
+			if(ng_acc>ng_acc_max){
+				ng_acc_max_theta<-out$theta
+				ng_acc_max_W<-out$W
+				ng_acc_max<-ng_acc
+				}
+			
+			alpha<-alpha/2
+			a_cycle=a_cycle+1
+			}
+			a_cycle=0
+	}
+
+	rpart<-rpart_pred(train_data,test_data,which_cols)
+	ng_acc<-accuracy(ng_acc_max_theta,ng_acc_max_W,test_data)
+	cat("\n","test_data accuracy=",ng_acc,"vs rpart=",rpart," ng better=",ng_acc>rpart)
+	results<-rbind(results,c(ng_acc,rpart))
+}
