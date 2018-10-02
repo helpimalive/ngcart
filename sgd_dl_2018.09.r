@@ -360,14 +360,15 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ##BANKNOTES##
 #############
 # X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# # X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-as.matrix(X)
-# names(X)<-c('a','b','c','d','base')
-# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-# results<-rbind(results,c('greedy','non_greedy','rpart'))
-# results<-results[-1,]
-# which_cols<-c("a","b","c","d")
-# X<-X[,c("a","b","c","d","base")]
+#X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\Matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-as.matrix(X)
+names(X)<-c('a','b','c','d','base')
+results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+results<-rbind(results,c('greedy','non_greedy','rpart'))
+results<-results[-1,]
+which_cols<-c("a","b","c","d")
+X<-X[,c("a","b","c","d","base")]
 
 ####
 ## CODE BREAKS DOWN IN CASE OF SPARSE OR NON_CONTINUOUS DATA
@@ -387,6 +388,25 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 # which_cols<-c("a","b","c","d","e")
 # X<-X[,c(which_cols,"base")]
 
+#################
+## IRIS		   ##
+#################
+X<-read.csv('C:\\users\\matt\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-as.data.frame(X)
+names(X)<-c('a','b','c','d','base')
+
+results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+results<-rbind(results,c('greedy','non_greedy','rpart'))
+results<-results[-1,]
+X[X=='Iris-versicolor']<-1
+X[X=='Iris-virginica']<-0
+X[X=='Iris-setosa']<-0
+X<-data.matrix(X)
+
+which_cols<-c("a","b","c","d")
+X[,which_cols]<-X[,which_cols]
+X<-X[,c(which_cols,"base")]
+
 
 
 depth<-0
@@ -398,7 +418,7 @@ while(i<ncol(X)-1){
 
 for(case in seq(1,10)){
 	
-	train_index<-sample(nrow(X),nrow(X)*0.80)
+	train_index<-sample(nrow(X),round(nrow(X)*0.80))
 	test_data<-X[-train_index,]
 
 	temp_train_data<-X[train_index,]
@@ -409,16 +429,37 @@ for(case in seq(1,10)){
 
 	i_weights<-apply(train_data[,1:(ncol(train_data)-1)],2,sd)
 	W<-matrix(rep(c(i_weights),depth),nrow=dim(X)[2]-1,ncol=depth,byrow=F)
-	# W<-matrix(rep(rep(40,length(i_weights)),depth),nrow=dim(X)[2]-1,ncol=depth,byrow=F)
+
 	theta<-initialize_theta(train_data)
-	alpha<-0.1
+	## USUALLY 0.1 but changed for iris
+	alpha<-0.8
 	tau = dim(train_data)[1]
 	v<-mean(W)
 	out<-greedy(theta,W,tau,alpha,v,train_data)
 	g_acc<- accuracy(out$theta,out$W,validate_data)
 	rpart<-rpart_pred(train_data,validate_data,which_cols)
 
+	it<-0
+	g_max_acc<-0
+	g_max_theta<-0
+	g_max_w<-0
+
+	while(it<10){
+		alpha<-alpha/2
+		out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
+		g_acc<- accuracy(out$theta,out$W,validate_data)
+		if(g_acc>g_max_acc){
+				cat("\n","alpha=",alpha,"accuracy=",g_acc)
+				g_max_theta<-out$theta
+				g_max_w<-out$W
+				g_max_acc<-g_acc
+				}
+		it=it+1
+	}
+	out<-greedy(g_max_theta,g_max_w,tau,alpha,v,train_data)
+
 	alpha<-0.1
+
 	a_cycle<-0
 	ng_acc<-0
 	ng_acc_max<-0
@@ -434,14 +475,18 @@ for(case in seq(1,10)){
 	# THIS LINE BEATS CANCER
 	# vs<-c(v2)
 	original_out<-out
-	for(v in vs){
+	for(try_v in vs){
 		out<-original_out
+		## I FORGOT THIS LINE BUT IT NEEDS TO BE IN AND RERUN FOR BANKNOTES AND CANCER
+		## USUALLY 0.1 but changed for iris
+		alpha<-0.8
 		while(a_cycle<=10){
 
-			out<-non_greedy(out$theta,out$W,tau,alpha,v,train_data)
+			out<-non_greedy(out$theta,out$W,tau,alpha,try_v,train_data)
 			ng_acc<- accuracy(out$theta,out$W,validate_data)
-			cat("\n","alpha=",alpha,"v=",v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
+			cat("\n","alpha=",alpha,"v=",try_v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
 			if(ng_acc>ng_acc_max){
+				cat("\n","saving this^ as best")
 				ng_acc_max_theta<-out$theta
 				ng_acc_max_W<-out$W
 				ng_acc_max<-ng_acc
@@ -458,3 +503,4 @@ for(case in seq(1,10)){
 	cat("\n","test_data accuracy=",ng_acc,"vs rpart=",rpart," ng better=",ng_acc>rpart)
 	results<-rbind(results,c(ng_acc,rpart))
 }
+
