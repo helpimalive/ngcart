@@ -1,5 +1,6 @@
 library(gtools)
 library(rpart)
+library(tree)
 
 ########################
 ### HELPER FUNCTIONS ###
@@ -92,6 +93,16 @@ rpart_pred<-function(train_data,test_data,which_cols){
 	return(sum(acc)/length(acc))
 }
 
+tree_test<-function(train_data,test_data,which_cols){
+	train_data<-as.data.frame(train_data)
+	test_data<-as.data.frame(test_data)
+	factors<-which_cols
+	formula<- as.formula(paste("as.factor(base)~",paste(factors,collapse="+")))
+	fit<- tree(formula,data = train_data)
+	preds<-predict(fit, newdata = test_data,type = "class")
+	acc<- sum(preds==test_data[,'base'])/length(preds)
+	return(acc)
+}
 
 total_loss<-function(theta,W,test_data){
 	test_theta<-update_theta(theta)
@@ -361,14 +372,14 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 #############
 # X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 #X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\Matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-as.matrix(X)
-names(X)<-c('a','b','c','d','base')
-results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-results<-rbind(results,c('greedy','non_greedy','rpart'))
-results<-results[-1,]
-which_cols<-c("a","b","c","d")
-X<-X[,c("a","b","c","d","base")]
+# X<-read.csv('C:\\users\\Matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-as.matrix(X)
+# names(X)<-c('a','b','c','d','base')
+# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+# results<-rbind(results,c('greedy','non_greedy','rpart'))
+# results<-results[-1,]
+# which_cols<-c("a","b","c","d")
+# X<-X[,c("a","b","c","d","base")]
 
 ####
 ## CODE BREAKS DOWN IN CASE OF SPARSE OR NON_CONTINUOUS DATA
@@ -391,20 +402,21 @@ X<-X[,c("a","b","c","d","base")]
 #################
 ## IRIS		   ##
 #################
-X<-read.csv('C:\\users\\matt\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\matt\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\matth\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 X<-as.data.frame(X)
 names(X)<-c('a','b','c','d','base')
 
 results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
 results<-rbind(results,c('greedy','non_greedy','rpart'))
 results<-results[-1,]
-X[X=='Iris-versicolor']<-1
-X[X=='Iris-virginica']<-0
+X[X=='Iris-versicolor']<-0
+X[X=='Iris-virginica']<-1
 X[X=='Iris-setosa']<-0
 X<-data.matrix(X)
 
 which_cols<-c("a","b","c","d")
-X[,which_cols]<-X[,which_cols]
+# X[,'d']<-scale(X[,'d'])
 X<-X[,c(which_cols,"base")]
 
 
@@ -449,15 +461,19 @@ for(case in seq(1,10)){
 		out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
 		g_acc<- accuracy(out$theta,out$W,validate_data)
 		if(g_acc>g_max_acc){
-				cat("\n","alpha=",alpha,"accuracy=",g_acc)
+				cat("\n","alpha=",round(alpha,4),"accuracy=",round(g_acc,2))
 				g_max_theta<-out$theta
 				g_max_w<-out$W
 				g_max_acc<-g_acc
+				g_max_alpha<-alpha
 				}
 		it=it+1
 	}
-	out<-greedy(g_max_theta,g_max_w,tau,alpha,v,train_data)
 
+	out<-greedy(g_max_theta,g_max_w,tau,g_max_alpha,v,train_data)
+	g_acc<- accuracy(g_max_theta,g_max_w,validate_data)
+	cat("\n","alpha=",round(g_max_alpha,4),"accuracy=",round(g_acc,2))
+	
 	alpha<-0.1
 
 	a_cycle<-0
@@ -484,7 +500,7 @@ for(case in seq(1,10)){
 
 			out<-non_greedy(out$theta,out$W,tau,alpha,try_v,train_data)
 			ng_acc<- accuracy(out$theta,out$W,validate_data)
-			cat("\n","alpha=",alpha,"v=",try_v,"g_acc=",g_acc,"ng_acc=",ng_acc,"rpart=",rpart,ng_acc>=rpart)
+			cat("\n","alpha=",round(alpha,4),"v=",round(try_v,2),"g_acc=",round(g_acc,2),"ng_acc=",round(ng_acc,2),"rpart=",round(rpart,2),ng_acc>=rpart)
 			if(ng_acc>ng_acc_max){
 				cat("\n","saving this^ as best")
 				ng_acc_max_theta<-out$theta
@@ -498,9 +514,9 @@ for(case in seq(1,10)){
 			a_cycle=0
 	}
 
-	rpart<-rpart_pred(train_data,test_data,which_cols)
+	rpart<-rpart_pred(rbind(train_data,validate_data),test_data,which_cols)
+	tree_acc<-tree_test(rbind(train_data,validate_data),test_data,which_cols)
 	ng_acc<-accuracy(ng_acc_max_theta,ng_acc_max_W,test_data)
-	cat("\n","test_data accuracy=",ng_acc,"vs rpart=",rpart," ng better=",ng_acc>rpart)
-	results<-rbind(results,c(ng_acc,rpart))
+	cat("\n","test_data accuracy=",round(ng_acc,2),"vs rpart=",round(rpart,2),"vs tree",tree_acc)
+	results<-rbind(results,c(ng_acc,rpart,tree_acc))
 }
-
