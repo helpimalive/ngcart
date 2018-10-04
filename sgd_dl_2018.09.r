@@ -323,8 +323,8 @@ greedy<-function(theta,W,tau,alpha,v,train_data,exhaustive){
 non_greedy<-function(theta,W,tau,alpha,v,train_data){
 	cols<-dim(train_data)[2]-1
 	for(t in seq(1,tau)){
-		samp_row <-sample(1:nrow(train_data),1)
-		# samp_row<-t
+		# samp_row <-sample(1:nrow(train_data),1)
+		samp_row<-t
 
 		# current path
 		h = sgn(W,train_data,samp_row) 
@@ -371,7 +371,7 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ##BANKNOTES##
 #############
 # X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-#X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\Matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-as.matrix(X)
 # names(X)<-c('a','b','c','d','base')
@@ -403,20 +403,21 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ## IRIS		   ##
 #################
 # X<-read.csv('C:\\users\\matt\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\matth\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\matth\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\mlarriva\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 X<-as.data.frame(X)
 names(X)<-c('a','b','c','d','base')
 
-results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-results<-rbind(results,c('greedy','non_greedy','rpart'))
-results<-results[-1,]
-X[X=='Iris-versicolor']<-0
-X[X=='Iris-virginica']<-1
-X[X=='Iris-setosa']<-0
+results<-data.frame(method=character(),accuracy=double())
+X[X=='Iris-versicolor']<-1
+X[X=='Iris-virginica']<-0
+
+X<-subset(X,X$base!='Iris-setosa')
+# X[X=='Iris-setosa']<-0
 X<-data.matrix(X)
 
 which_cols<-c("a","b","c","d")
-# X[,'d']<-scale(X[,'d'])
+# X[,which_cols]<-scale(X[,which_cols])
 X<-X[,c(which_cols,"base")]
 
 
@@ -428,7 +429,7 @@ while(i<ncol(X)-1){
 	i=i+1
 }
 
-for(case in seq(1,10)){
+for(case in seq(1,20)){
 	
 	train_index<-sample(nrow(X),round(nrow(X)*0.80))
 	test_data<-X[-train_index,]
@@ -458,10 +459,10 @@ for(case in seq(1,10)){
 
 	while(it<10){
 		alpha<-alpha/2
-		out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
+		out<-greedy(out$theta,out$W,tau,alpha,v,rbind(train_data))
 		g_acc<- accuracy(out$theta,out$W,validate_data)
 		if(g_acc>g_max_acc){
-				cat("\n","alpha=",round(alpha,4),"accuracy=",round(g_acc,2))
+				cat("\n","alpha=",1.0000*round(alpha,4),"accuracy=",1.0000*round(g_acc,2))
 				g_max_theta<-out$theta
 				g_max_w<-out$W
 				g_max_acc<-g_acc
@@ -472,20 +473,24 @@ for(case in seq(1,10)){
 
 	out<-greedy(g_max_theta,g_max_w,tau,g_max_alpha,v,train_data)
 	g_acc<- accuracy(g_max_theta,g_max_w,validate_data)
-	cat("\n","alpha=",round(g_max_alpha,4),"accuracy=",round(g_acc,2))
+	cat("\n","alpha=",1.0000*round(g_max_alpha,4),"accuracy=",1.0000*round(g_acc,2))
 	
 	alpha<-0.1
 
 	a_cycle<-0
 	ng_acc<-0
-	ng_acc_max<-0
-
+	ng_acc_max<-g_acc
+	ng_acc_max_theta<-out$theta
+	ng_acc_max_W<-out$W
+	ng_min_alpha<-alpha
+	ng_min_alpha<-1
 
 	v2<-abs(mean(out$W))
 	if(v<0.01){
 		v<-0.1
 	}
 	vs<-c(v,v2)
+	# vs<-c(v)
 	# THIS LINE BEATS BANKNOTES
 	# vs<-c(v)
 	# THIS LINE BEATS CANCER
@@ -495,17 +500,25 @@ for(case in seq(1,10)){
 		out<-original_out
 		## I FORGOT THIS LINE BUT IT NEEDS TO BE IN AND RERUN FOR BANKNOTES AND CANCER
 		## USUALLY 0.1 but changed for iris
-		alpha<-0.8
+		alpha<-0.1
 		while(a_cycle<=10){
 
 			out<-non_greedy(out$theta,out$W,tau,alpha,try_v,train_data)
 			ng_acc<- accuracy(out$theta,out$W,validate_data)
-			cat("\n","alpha=",round(alpha,4),"v=",round(try_v,2),"g_acc=",round(g_acc,2),"ng_acc=",round(ng_acc,2),"rpart=",round(rpart,2),ng_acc>=rpart)
-			if(ng_acc>ng_acc_max){
+			cat("\n",
+				"alpha=",1.0000*round(alpha,4),
+				"v=",1.0000*round(try_v,2),
+				"g_acc=",1.0000*round(g_acc,2),
+				"ng_acc=",1.0000*round(ng_acc,2),
+				"rpart=",1.0000*round(rpart,2),ng_acc>=rpart)
+
+			 if(ng_acc>=ng_acc_max & alpha<ng_min_alpha){
 				cat("\n","saving this^ as best")
+				out<-non_greedy(out$theta,out$W,tau,alpha,try_v,rbind(validate_data,train_data))
 				ng_acc_max_theta<-out$theta
 				ng_acc_max_W<-out$W
 				ng_acc_max<-ng_acc
+				ng_min_alpha<-alpha
 				}
 			
 			alpha<-alpha/2
@@ -515,8 +528,19 @@ for(case in seq(1,10)){
 	}
 
 	rpart<-rpart_pred(rbind(train_data,validate_data),test_data,which_cols)
+	cat("\n ",rpart)
+	rpart<-data.frame(method="rpart", accuracy=rpart)
+	results<-rbind(results,rpart)
 	tree_acc<-tree_test(rbind(train_data,validate_data),test_data,which_cols)
+	cat("\n ",tree_acc)
+	tree_acc<-data.frame(method="tree_acc", accuracy=as.numeric(tree_acc))
+	results<-rbind(results,tree_acc)
 	ng_acc<-accuracy(ng_acc_max_theta,ng_acc_max_W,test_data)
-	cat("\n","test_data accuracy=",round(ng_acc,2),"vs rpart=",round(rpart,2),"vs tree",tree_acc)
-	results<-rbind(results,c(ng_acc,rpart,tree_acc))
+	cat("\n ","ng_acc = ",ng_acc)
+	ng_acc<-data.frame(method="ng_acc", accuracy=ng_acc)
+	results<-rbind(results,ng_acc)
+	
 }
+
+aggregate(results,list(results$method),mean)
+summary(aov(accuracy~method,data=results))
