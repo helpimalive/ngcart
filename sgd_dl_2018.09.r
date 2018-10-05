@@ -323,8 +323,8 @@ greedy<-function(theta,W,tau,alpha,v,train_data,exhaustive){
 non_greedy<-function(theta,W,tau,alpha,v,train_data){
 	cols<-dim(train_data)[2]-1
 	for(t in seq(1,tau)){
-		# samp_row <-sample(1:nrow(train_data),1)
-		samp_row<-t
+		samp_row <-sample(1:nrow(train_data),1)
+		# samp_row<-t
 
 		# current path
 		h = sgn(W,train_data,samp_row) 
@@ -375,9 +375,7 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 # X<-read.csv('C:\\users\\Matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-as.matrix(X)
 # names(X)<-c('a','b','c','d','base')
-# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-# results<-rbind(results,c('greedy','non_greedy','rpart'))
-# results<-results[-1,]
+# results<-data.frame(method=character(),accuracy=double())
 # which_cols<-c("a","b","c","d")
 # X<-X[,c("a","b","c","d","base")]
 
@@ -388,37 +386,37 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ###############
 ## CANCER    ##
 ###############
-# X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
-# X<-as.matrix(X)
-# names(X)<-c('a','b','c','d','base')
-# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-# results<-rbind(results,c('greedy','non_greedy','rpart'))
-# results<-results[-1,]
-# which_cols<-c("a","b","c","d","e")
-# X<-X[,c(which_cols,"base")]
+X<-as.matrix(X)
+names(X)<-c('a','b','c','d','base')
+results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+results<-rbind(results,c('greedy','non_greedy','rpart'))
+results<-results[-1,]
+which_cols<-c("a","b","c","d","e")
+X<-X[,c(which_cols,"base")]
 
 #################
 ## IRIS		   ##
 #################
 # X<-read.csv('C:\\users\\matt\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\matth\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\mlarriva\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-as.data.frame(X)
-names(X)<-c('a','b','c','d','base')
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\iris.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-as.data.frame(X)
+# names(X)<-c('a','b','c','d','base')
 
-results<-data.frame(method=character(),accuracy=double())
-X[X=='Iris-versicolor']<-1
-X[X=='Iris-virginica']<-0
+# results<-data.frame(method=character(),accuracy=double())
+# X[X=='Iris-setosa']<-1
+# X[X=='Iris-versicolor']<-0
 
-X<-subset(X,X$base!='Iris-setosa')
-# X[X=='Iris-setosa']<-0
-X<-data.matrix(X)
+# X<-subset(X,X$base!='Iris-virginica')
+# # X[X=='Iris-setosa']<-0
+# X<-data.matrix(X)
 
-which_cols<-c("a","b","c","d")
-# X[,which_cols]<-scale(X[,which_cols])
-X<-X[,c(which_cols,"base")]
+# which_cols<-c("a","b","c","d")
+# # X[,which_cols]<-scale(X[,which_cols])
+# X<-X[,c(which_cols,"base")]
 
 
 
@@ -433,34 +431,27 @@ for(case in seq(1,20)){
 	
 	train_index<-sample(nrow(X),round(nrow(X)*0.80))
 	test_data<-X[-train_index,]
-
-	temp_train_data<-X[train_index,]
-	train_index<-sample(nrow(temp_train_data),nrow(temp_train_data)*0.8)
-	
-	train_data<-temp_train_data[train_index,]
-	validate_data<-temp_train_data[-train_index,]
+	train_data<-X[train_index,]
 
 	i_weights<-apply(train_data[,1:(ncol(train_data)-1)],2,sd)
 	W<-matrix(rep(c(i_weights),depth),nrow=dim(X)[2]-1,ncol=depth,byrow=F)
 
 	theta<-initialize_theta(train_data)
-	## USUALLY 0.1 but changed for iris
-	alpha<-0.8
+
+	alpha<-0.1
 	tau = dim(train_data)[1]
 	v<-mean(W)
-	out<-greedy(theta,W,tau,alpha,v,train_data)
-	g_acc<- accuracy(out$theta,out$W,validate_data)
-	rpart<-rpart_pred(train_data,validate_data,which_cols)
 
 	it<-0
 	g_max_acc<-0
 	g_max_theta<-0
 	g_max_w<-0
 
+	out<-greedy(theta,W,tau,alpha,v,train_data)
 	while(it<10){
 		alpha<-alpha/2
-		out<-greedy(out$theta,out$W,tau,alpha,v,rbind(train_data))
-		g_acc<- accuracy(out$theta,out$W,validate_data)
+		out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
+		g_acc<- accuracy(out$theta,out$W,train_data)
 		if(g_acc>g_max_acc){
 				cat("\n","alpha=",1.0000*round(alpha,4),"accuracy=",1.0000*round(g_acc,2))
 				g_max_theta<-out$theta
@@ -472,18 +463,17 @@ for(case in seq(1,20)){
 	}
 
 	out<-greedy(g_max_theta,g_max_w,tau,g_max_alpha,v,train_data)
-	g_acc<- accuracy(g_max_theta,g_max_w,validate_data)
-	cat("\n","alpha=",1.0000*round(g_max_alpha,4),"accuracy=",1.0000*round(g_acc,2))
+	g_acc_1<- accuracy(g_max_theta,g_max_w,train_data)
+	cat("\n","alpha=",1.0000*round(g_max_alpha,4),"accuracy=",1.0000*round(g_acc_1,2))
 	
-	alpha<-0.1
-
 	a_cycle<-0
 	ng_acc<-0
-	ng_acc_max<-g_acc
-	ng_acc_max_theta<-out$theta
-	ng_acc_max_W<-out$W
+	ng_acc_max<-g_acc_1
+	# ng_acc_max_theta<-out$theta
+	# ng_acc_max_W<-out$W
+	ng_acc_max_theta<-g_max_theta
+	ng_acc_max_W<-g_max_w
 	ng_min_alpha<-alpha
-	ng_min_alpha<-1
 
 	v2<-abs(mean(out$W))
 	if(v<0.01){
@@ -504,17 +494,19 @@ for(case in seq(1,20)){
 		while(a_cycle<=10){
 
 			out<-non_greedy(out$theta,out$W,tau,alpha,try_v,train_data)
-			ng_acc<- accuracy(out$theta,out$W,validate_data)
+			ng_acc<- accuracy(out$theta,out$W,train_data)
 			cat("\n",
 				"alpha=",1.0000*round(alpha,4),
 				"v=",1.0000*round(try_v,2),
-				"g_acc=",1.0000*round(g_acc,2),
-				"ng_acc=",1.0000*round(ng_acc,2),
-				"rpart=",1.0000*round(rpart,2),ng_acc>=rpart)
+				"g_acc=",1.0000*round(g_acc_1,2),
+				"ng_acc=",1.0000*round(ng_acc,2)
+				# "rpart=",1.0000*round(rpart,2),
+				# ng_acc>=rpart
+				)
 
-			 if(ng_acc>=ng_acc_max & alpha<ng_min_alpha){
+			 if(ng_acc>=ng_acc_max ){
 				cat("\n","saving this^ as best")
-				out<-non_greedy(out$theta,out$W,tau,alpha,try_v,rbind(validate_data,train_data))
+				# out<-non_greedy(out$theta,out$W,tau,alpha,try_v,rbind(validate_data,train_data))
 				ng_acc_max_theta<-out$theta
 				ng_acc_max_W<-out$W
 				ng_acc_max<-ng_acc
@@ -527,11 +519,11 @@ for(case in seq(1,20)){
 			a_cycle=0
 	}
 
-	rpart<-rpart_pred(rbind(train_data,validate_data),test_data,which_cols)
+	rpart<-rpart_pred(train_data,test_data,which_cols)
 	cat("\n ",rpart)
 	rpart<-data.frame(method="rpart", accuracy=rpart)
 	results<-rbind(results,rpart)
-	tree_acc<-tree_test(rbind(train_data,validate_data),test_data,which_cols)
+	tree_acc<-tree_test(train_data,test_data,which_cols)
 	cat("\n ",tree_acc)
 	tree_acc<-data.frame(method="tree_acc", accuracy=as.numeric(tree_acc))
 	results<-rbind(results,tree_acc)
@@ -544,3 +536,241 @@ for(case in seq(1,20)){
 
 aggregate(results,list(results$method),mean)
 summary(aov(accuracy~method,data=results))
+
+summary(aov(accuracy~method,data=results))
+TukeyHSD(aov(accuracy~method,data=results))
+# Iris-versicolor vs Iris-virginica
+#      method accuracy
+# 1     rpart     0.90
+# 2  tree_acc     0.95
+# 3    ng_acc     0.95
+# 4     rpart     0.95
+# 5  tree_acc     1.00
+# 6    ng_acc     0.95
+# 7     rpart     0.95
+# 8  tree_acc     1.00
+# 9    ng_acc     0.90
+# 10    rpart     0.95
+# 11 tree_acc     1.00
+# 12   ng_acc     0.95
+# 13    rpart     1.00
+# 14 tree_acc     1.00
+# 15   ng_acc     0.95
+# 16    rpart     0.95
+# 17 tree_acc     0.85
+# 18   ng_acc     0.90
+# 19    rpart     0.90
+# 20 tree_acc     0.90
+# 21   ng_acc     0.95
+# 22    rpart     0.95
+# 23 tree_acc     1.00
+# 24   ng_acc     0.95
+# 25    rpart     0.95
+# 26 tree_acc     0.95
+# 27   ng_acc     0.90
+# 28    rpart     0.90
+# 29 tree_acc     0.90
+# 30   ng_acc     0.95
+# 31    rpart     0.90
+# 32 tree_acc     0.90
+# 33   ng_acc     0.90
+# 34    rpart     0.80
+# 35 tree_acc     0.80
+# 36   ng_acc     1.00
+# 37    rpart     1.00
+# 38 tree_acc     1.00
+# 39   ng_acc     1.00
+# 40    rpart     1.00
+# 41 tree_acc     1.00
+# 42   ng_acc     1.00
+# 43    rpart     1.00
+# 44 tree_acc     1.00
+# 45   ng_acc     1.00
+# 46    rpart     0.90
+# 47 tree_acc     0.90
+# 48   ng_acc     0.90
+# 49    rpart     0.90
+# 50 tree_acc     0.90
+# 51   ng_acc     0.95
+# 52    rpart     0.85
+# 53 tree_acc     0.85
+# 54   ng_acc     0.80
+# 55    rpart     0.90
+# 56 tree_acc     0.95
+# 57   ng_acc     0.95
+# 58    rpart     0.95
+# 59 tree_acc     0.95
+# 60   ng_acc     0.95
+
+# Iris-setosa Iris-virginica
+#      method accuracy
+# 1     rpart     1.00
+# 2  tree_acc     1.00
+# 3    ng_acc     1.00
+# 4     rpart     1.00
+# 5  tree_acc     1.00
+# 6    ng_acc     1.00
+# 7     rpart     1.00
+# 8  tree_acc     1.00
+# 9    ng_acc     1.00
+# 10    rpart     1.00
+# 11 tree_acc     1.00
+# 12   ng_acc     1.00
+# 13    rpart     1.00
+# 14 tree_acc     1.00
+# 15   ng_acc     1.00
+# 16    rpart     1.00
+# 17 tree_acc     1.00
+# 18   ng_acc     1.00
+# 19    rpart     1.00
+# 20 tree_acc     1.00
+# 21   ng_acc     1.00
+# 22    rpart     1.00
+# 23 tree_acc     1.00
+# 24   ng_acc     1.00
+# 25    rpart     1.00
+# 26 tree_acc     1.00
+# 27   ng_acc     1.00
+# 28    rpart     1.00
+# 29 tree_acc     1.00
+# 30   ng_acc     1.00
+# 31    rpart     1.00
+# 32 tree_acc     1.00
+# 33   ng_acc     0.95
+# 34    rpart     1.00
+# 35 tree_acc     1.00
+# 36   ng_acc     1.00
+# 37    rpart     1.00
+# 38 tree_acc     1.00
+# 39   ng_acc     1.00
+# 40    rpart     1.00
+# 41 tree_acc     1.00
+# 42   ng_acc     1.00
+# 43    rpart     1.00
+# 44 tree_acc     1.00
+# 45   ng_acc     1.00
+# 46    rpart     1.00
+# 47 tree_acc     1.00
+# 48   ng_acc     0.95
+# 49    rpart     1.00
+# 50 tree_acc     1.00
+# 51   ng_acc     1.00
+# 52    rpart     1.00
+# 53 tree_acc     1.00
+# 54   ng_acc     1.00
+# 55    rpart     1.00
+# 56 tree_acc     1.00
+# 57   ng_acc     0.95
+# 58    rpart     1.00
+# 59 tree_acc     1.00
+# 60   ng_acc     1.00
+
+# Iris-setosa 	Iris-versicolor
+#      method accuracy
+# 1     rpart     1.00
+# 2  tree_acc     1.00
+# 3    ng_acc     1.00
+# 4     rpart     1.00
+# 5  tree_acc     1.00
+# 6    ng_acc     1.00
+# 7     rpart     1.00
+# 8  tree_acc     1.00
+# 9    ng_acc     0.95
+# 10    rpart     1.00
+# 11 tree_acc     1.00
+# 12   ng_acc     1.00
+# 13    rpart     1.00
+# 14 tree_acc     1.00
+# 15   ng_acc     0.95
+# 16    rpart     1.00
+# 17 tree_acc     1.00
+# 18   ng_acc     1.00
+# 19    rpart     1.00
+# 20 tree_acc     1.00
+# 21   ng_acc     0.95
+# 22    rpart     1.00
+# 23 tree_acc     1.00
+# 24   ng_acc     1.00
+# 25    rpart     1.00
+# 26 tree_acc     1.00
+# 27   ng_acc     1.00
+# 28    rpart     1.00
+# 29 tree_acc     1.00
+# 30   ng_acc     1.00
+# 31    rpart     1.00
+# 32 tree_acc     1.00
+# 33   ng_acc     1.00
+# 34    rpart     1.00
+# 35 tree_acc     1.00
+# 36   ng_acc     1.00
+# 37    rpart     1.00
+# 38 tree_acc     1.00
+# 39   ng_acc     1.00
+# 40    rpart     1.00
+# 41 tree_acc     1.00
+# 42   ng_acc     1.00
+# 43    rpart     1.00
+# 44 tree_acc     1.00
+# 45   ng_acc     1.00
+# 46    rpart     1.00
+# 47 tree_acc     1.00
+# 48   ng_acc     1.00
+# 49    rpart     1.00
+# 50 tree_acc     1.00
+# 51   ng_acc     1.00
+# 52    rpart     1.00
+# 53 tree_acc     1.00
+# 54   ng_acc     1.00
+# 55    rpart     1.00
+# 56 tree_acc     1.00
+# 57   ng_acc     1.00
+# 58    rpart     1.00
+# 59 tree_acc     1.00
+# 60   ng_acc     1.00
+
+# banknotes
+# rpart	0.9781022
+# tree	0.9708029
+# ng_cart	0.9562044
+# rpart	0.9708029
+# tree	0.9854015
+# ng_cart	0.9890511
+# rpart	0.9890511
+# tree	0.9817518
+# ng_cart	0.9927007
+# rpart	0.9562044
+# tree	0.9890511
+# ng_cart	0.9927007
+# rpart	0.9379562
+# tree	0.9890511
+# ng_cart	1
+# rpart	0.9306569
+# tree	0.9635036
+# ng_cart	0.9963504
+# rpart	0.9489051
+# tree	0.9744526
+# ng_cart	0.9927007
+# rpart	0.9635036
+# tree	0.9781022
+# ng_cart	0.9890511
+# rpart	0.9160584
+# tree	0.9708029
+# ng_cart	0.9817518
+# rpart	0.9781022
+# tree	0.9635036
+# ng_cart	0.9744526
+# rpart	0.9817518
+# tree	0.9927007
+# ng_cart	0.9927007
+# rpart	0.9671533
+# tree	0.9890511
+# ng_cart	1
+# rpart	0.959854
+# tree	0.9744526
+# ng_cart	0.9854015
+# rpart	0.9525547
+# tree	0.9781022
+# ng_cart	0.9744526
+# rpart	0.9671533
+# tree	0.9781022
+# ng_cart	0.9927007
