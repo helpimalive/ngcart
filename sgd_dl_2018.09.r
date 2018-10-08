@@ -390,11 +390,10 @@ X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",
 # X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
 X<-as.matrix(X)
-names(X)<-c('a','b','c','d','base')
 results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
 results<-rbind(results,c('greedy','non_greedy','rpart'))
 results<-results[-1,]
-which_cols<-c("a","b","c","d","e")
+which_cols<-c("a","b","c","d")
 X<-X[,c(which_cols,"base")]
 
 #################
@@ -427,7 +426,7 @@ while(i<ncol(X)-1){
 	i=i+1
 }
 
-for(case in seq(1,20)){
+for(case in seq(1,5)){
 	
 	train_index<-sample(nrow(X),round(nrow(X)*0.80))
 	test_data<-X[-train_index,]
@@ -539,6 +538,10 @@ summary(aov(accuracy~method,data=results))
 
 summary(aov(accuracy~method,data=results))
 TukeyHSD(aov(accuracy~method,data=results))
+
+wilcox.test(results[results$method=='ng_acc',2],results[results$method=='tree_acc',2],paired=TRUE,alternative="greater")
+wilcox.test(results[results$method=='ng_acc',2],results[results$method=='rpart',2],paired=TRUE,alternative="greater")
+
 # Iris-versicolor vs Iris-virginica
 #      method accuracy
 # 1     rpart     0.90
@@ -774,3 +777,80 @@ TukeyHSD(aov(accuracy~method,data=results))
 # rpart	0.9671533
 # tree	0.9781022
 # ng_cart	0.9927007
+
+# cancer (columns a,b,c,d,e)
+#      method  accuracy
+# 1     rpart 0.9051095
+# 2  tree_acc 0.9562044
+# 3    ng_acc 0.9489051
+# 4     rpart 0.9270073
+# 5  tree_acc 0.9562044
+# 6    ng_acc 0.9343066
+# 7     rpart 0.9562044
+# 8  tree_acc 0.9343066
+# 9    ng_acc 0.9781022
+# 10    rpart 0.9489051
+# 11 tree_acc 0.9416058
+# 12   ng_acc 0.9270073
+# 13    rpart 0.9635036
+# 14 tree_acc 0.9416058
+# 15   ng_acc 0.9562044
+# 16    rpart 0.9197080
+# 17 tree_acc 0.9051095
+# 18   ng_acc 0.9270073
+# 19    rpart 0.9489051
+# 20 tree_acc 0.9635036
+# 21   ng_acc 0.9635036
+# 22    rpart 0.9270073
+# 23 tree_acc 0.9197080
+# 24   ng_acc 0.9489051
+# 25    rpart 0.9343066
+# 26 tree_acc 0.9708029
+# 27   ng_acc 0.9562044
+# 28    rpart 0.9635036
+# 29 tree_acc 0.9635036
+# 30   ng_acc 0.9781022
+# 31    rpart 0.9197080
+# 32 tree_acc 0.9416058
+# 33   ng_acc 0.9489051
+# 34    rpart 0.9489051
+# 35 tree_acc 0.9416058
+# 36   ng_acc 0.9708029
+# 37    rpart 0.9635036
+# 38 tree_acc 0.9562044
+# 39   ng_acc 0.9708029
+# 40    rpart 0.9489051
+# 41 tree_acc 0.9343066
+# 42   ng_acc 0.9635036
+# 43    rpart 0.9489051
+# 44 tree_acc 0.9635036
+# 45   ng_acc 0.9343066
+# 46    rpart 0.9270073
+# 47 tree_acc 0.9489051
+# 48   ng_acc 0.9635036
+# 49    rpart 0.9197080
+# 50 tree_acc 0.8978102
+# 51   ng_acc 0.9197080
+# 52    rpart 0.9489051
+# 53 tree_acc 0.9635036
+# 54   ng_acc 0.9562044
+# 55    rpart 0.9197080
+# 56 tree_acc 0.9343066
+# 57   ng_acc 0.9416058
+# 58    rpart 0.9562044
+# 59 tree_acc 0.9562044
+# 60   ng_acc 0.9343066
+
+# cancer columns(a,b,c,d,e,f)
+# rpart	0.9708029
+# tree	0.9635036
+# ng_cart	0.9854015
+# rpart	0.9124088
+# tree	0.9489051
+# ng_cart	0.9416058
+# rpart	0.9562044
+# tree	0.9562044
+# ng_cart	0.9708029
+# rpart	0.9562044
+# tree	0.9635036
+# ng_cart	0.9781022
