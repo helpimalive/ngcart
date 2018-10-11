@@ -370,14 +370,15 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 #############
 ##BANKNOTES##
 #############
+# https://archive.ics.uci.edu/ml/datasets/banknote+authentication
 # X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\Matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-as.matrix(X)
 # names(X)<-c('a','b','c','d','base')
 # results<-data.frame(method=character(),accuracy=double())
-# which_cols<-c("a","b","c","d")
-# X<-X[,c("a","b","c","d","base")]
+# which_cols<-c("a","b")
+# X<-X[,c("a","b","base")]
 
 ####
 ## CODE BREAKS DOWN IN CASE OF SPARSE OR NON_CONTINUOUS DATA
@@ -385,16 +386,18 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 
 ###############
 ## CANCER    ##
+## https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/
+## missing data dropped
 ###############
-X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
-X<-as.matrix(X)
-results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-results<-rbind(results,c('greedy','non_greedy','rpart'))
-results<-results[-1,]
-which_cols<-c("a","b","c","d")
-X<-X[,c(which_cols,"base")]
+# X<-as.matrix(X)
+# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+# results<-rbind(results,c('greedy','non_greedy','rpart'))
+# results<-results[-1,]
+# which_cols<-c("a","b")
+# X<-X[,c(which_cols,"base")]
 
 #################
 ## IRIS		   ##
@@ -417,7 +420,26 @@ X<-X[,c(which_cols,"base")]
 # # X[,which_cols]<-scale(X[,which_cols])
 # X<-X[,c(which_cols,"base")]
 
+#############
+## HABERMAN  ###
+#############
+# https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\haberman.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-as.matrix(X)
 
+# results<-data.frame(method=character(),accuracy=double())
+# which_cols<-c('a','b')
+# X[X['base']==2,4]<-0
+
+#############
+##  BLOOD  ##
+#############
+# https://archive.ics.uci.edu/ml/machine-learning-databases/blood-transfusion/
+X<-read.csv('C:\\users\\mlarriva\\desktop\\blood.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-as.matrix(X)
+
+results<-data.frame(method=character(),accuracy=double())
+which_cols<-c('a','b')
 
 depth<-0
 i<-0
@@ -426,7 +448,7 @@ while(i<ncol(X)-1){
 	i=i+1
 }
 
-for(case in seq(1,5)){
+for(case in seq(1,20)){
 	
 	train_index<-sample(nrow(X),round(nrow(X)*0.80))
 	test_data<-X[-train_index,]
@@ -541,316 +563,3 @@ TukeyHSD(aov(accuracy~method,data=results))
 
 wilcox.test(results[results$method=='ng_acc',2],results[results$method=='tree_acc',2],paired=TRUE,alternative="greater")
 wilcox.test(results[results$method=='ng_acc',2],results[results$method=='rpart',2],paired=TRUE,alternative="greater")
-
-# Iris-versicolor vs Iris-virginica
-#      method accuracy
-# 1     rpart     0.90
-# 2  tree_acc     0.95
-# 3    ng_acc     0.95
-# 4     rpart     0.95
-# 5  tree_acc     1.00
-# 6    ng_acc     0.95
-# 7     rpart     0.95
-# 8  tree_acc     1.00
-# 9    ng_acc     0.90
-# 10    rpart     0.95
-# 11 tree_acc     1.00
-# 12   ng_acc     0.95
-# 13    rpart     1.00
-# 14 tree_acc     1.00
-# 15   ng_acc     0.95
-# 16    rpart     0.95
-# 17 tree_acc     0.85
-# 18   ng_acc     0.90
-# 19    rpart     0.90
-# 20 tree_acc     0.90
-# 21   ng_acc     0.95
-# 22    rpart     0.95
-# 23 tree_acc     1.00
-# 24   ng_acc     0.95
-# 25    rpart     0.95
-# 26 tree_acc     0.95
-# 27   ng_acc     0.90
-# 28    rpart     0.90
-# 29 tree_acc     0.90
-# 30   ng_acc     0.95
-# 31    rpart     0.90
-# 32 tree_acc     0.90
-# 33   ng_acc     0.90
-# 34    rpart     0.80
-# 35 tree_acc     0.80
-# 36   ng_acc     1.00
-# 37    rpart     1.00
-# 38 tree_acc     1.00
-# 39   ng_acc     1.00
-# 40    rpart     1.00
-# 41 tree_acc     1.00
-# 42   ng_acc     1.00
-# 43    rpart     1.00
-# 44 tree_acc     1.00
-# 45   ng_acc     1.00
-# 46    rpart     0.90
-# 47 tree_acc     0.90
-# 48   ng_acc     0.90
-# 49    rpart     0.90
-# 50 tree_acc     0.90
-# 51   ng_acc     0.95
-# 52    rpart     0.85
-# 53 tree_acc     0.85
-# 54   ng_acc     0.80
-# 55    rpart     0.90
-# 56 tree_acc     0.95
-# 57   ng_acc     0.95
-# 58    rpart     0.95
-# 59 tree_acc     0.95
-# 60   ng_acc     0.95
-
-# Iris-setosa Iris-virginica
-#      method accuracy
-# 1     rpart     1.00
-# 2  tree_acc     1.00
-# 3    ng_acc     1.00
-# 4     rpart     1.00
-# 5  tree_acc     1.00
-# 6    ng_acc     1.00
-# 7     rpart     1.00
-# 8  tree_acc     1.00
-# 9    ng_acc     1.00
-# 10    rpart     1.00
-# 11 tree_acc     1.00
-# 12   ng_acc     1.00
-# 13    rpart     1.00
-# 14 tree_acc     1.00
-# 15   ng_acc     1.00
-# 16    rpart     1.00
-# 17 tree_acc     1.00
-# 18   ng_acc     1.00
-# 19    rpart     1.00
-# 20 tree_acc     1.00
-# 21   ng_acc     1.00
-# 22    rpart     1.00
-# 23 tree_acc     1.00
-# 24   ng_acc     1.00
-# 25    rpart     1.00
-# 26 tree_acc     1.00
-# 27   ng_acc     1.00
-# 28    rpart     1.00
-# 29 tree_acc     1.00
-# 30   ng_acc     1.00
-# 31    rpart     1.00
-# 32 tree_acc     1.00
-# 33   ng_acc     0.95
-# 34    rpart     1.00
-# 35 tree_acc     1.00
-# 36   ng_acc     1.00
-# 37    rpart     1.00
-# 38 tree_acc     1.00
-# 39   ng_acc     1.00
-# 40    rpart     1.00
-# 41 tree_acc     1.00
-# 42   ng_acc     1.00
-# 43    rpart     1.00
-# 44 tree_acc     1.00
-# 45   ng_acc     1.00
-# 46    rpart     1.00
-# 47 tree_acc     1.00
-# 48   ng_acc     0.95
-# 49    rpart     1.00
-# 50 tree_acc     1.00
-# 51   ng_acc     1.00
-# 52    rpart     1.00
-# 53 tree_acc     1.00
-# 54   ng_acc     1.00
-# 55    rpart     1.00
-# 56 tree_acc     1.00
-# 57   ng_acc     0.95
-# 58    rpart     1.00
-# 59 tree_acc     1.00
-# 60   ng_acc     1.00
-
-# Iris-setosa 	Iris-versicolor
-#      method accuracy
-# 1     rpart     1.00
-# 2  tree_acc     1.00
-# 3    ng_acc     1.00
-# 4     rpart     1.00
-# 5  tree_acc     1.00
-# 6    ng_acc     1.00
-# 7     rpart     1.00
-# 8  tree_acc     1.00
-# 9    ng_acc     0.95
-# 10    rpart     1.00
-# 11 tree_acc     1.00
-# 12   ng_acc     1.00
-# 13    rpart     1.00
-# 14 tree_acc     1.00
-# 15   ng_acc     0.95
-# 16    rpart     1.00
-# 17 tree_acc     1.00
-# 18   ng_acc     1.00
-# 19    rpart     1.00
-# 20 tree_acc     1.00
-# 21   ng_acc     0.95
-# 22    rpart     1.00
-# 23 tree_acc     1.00
-# 24   ng_acc     1.00
-# 25    rpart     1.00
-# 26 tree_acc     1.00
-# 27   ng_acc     1.00
-# 28    rpart     1.00
-# 29 tree_acc     1.00
-# 30   ng_acc     1.00
-# 31    rpart     1.00
-# 32 tree_acc     1.00
-# 33   ng_acc     1.00
-# 34    rpart     1.00
-# 35 tree_acc     1.00
-# 36   ng_acc     1.00
-# 37    rpart     1.00
-# 38 tree_acc     1.00
-# 39   ng_acc     1.00
-# 40    rpart     1.00
-# 41 tree_acc     1.00
-# 42   ng_acc     1.00
-# 43    rpart     1.00
-# 44 tree_acc     1.00
-# 45   ng_acc     1.00
-# 46    rpart     1.00
-# 47 tree_acc     1.00
-# 48   ng_acc     1.00
-# 49    rpart     1.00
-# 50 tree_acc     1.00
-# 51   ng_acc     1.00
-# 52    rpart     1.00
-# 53 tree_acc     1.00
-# 54   ng_acc     1.00
-# 55    rpart     1.00
-# 56 tree_acc     1.00
-# 57   ng_acc     1.00
-# 58    rpart     1.00
-# 59 tree_acc     1.00
-# 60   ng_acc     1.00
-
-# banknotes
-# rpart	0.9781022
-# tree	0.9708029
-# ng_cart	0.9562044
-# rpart	0.9708029
-# tree	0.9854015
-# ng_cart	0.9890511
-# rpart	0.9890511
-# tree	0.9817518
-# ng_cart	0.9927007
-# rpart	0.9562044
-# tree	0.9890511
-# ng_cart	0.9927007
-# rpart	0.9379562
-# tree	0.9890511
-# ng_cart	1
-# rpart	0.9306569
-# tree	0.9635036
-# ng_cart	0.9963504
-# rpart	0.9489051
-# tree	0.9744526
-# ng_cart	0.9927007
-# rpart	0.9635036
-# tree	0.9781022
-# ng_cart	0.9890511
-# rpart	0.9160584
-# tree	0.9708029
-# ng_cart	0.9817518
-# rpart	0.9781022
-# tree	0.9635036
-# ng_cart	0.9744526
-# rpart	0.9817518
-# tree	0.9927007
-# ng_cart	0.9927007
-# rpart	0.9671533
-# tree	0.9890511
-# ng_cart	1
-# rpart	0.959854
-# tree	0.9744526
-# ng_cart	0.9854015
-# rpart	0.9525547
-# tree	0.9781022
-# ng_cart	0.9744526
-# rpart	0.9671533
-# tree	0.9781022
-# ng_cart	0.9927007
-
-# cancer (columns a,b,c,d,e)
-#      method  accuracy
-# 1     rpart 0.9051095
-# 2  tree_acc 0.9562044
-# 3    ng_acc 0.9489051
-# 4     rpart 0.9270073
-# 5  tree_acc 0.9562044
-# 6    ng_acc 0.9343066
-# 7     rpart 0.9562044
-# 8  tree_acc 0.9343066
-# 9    ng_acc 0.9781022
-# 10    rpart 0.9489051
-# 11 tree_acc 0.9416058
-# 12   ng_acc 0.9270073
-# 13    rpart 0.9635036
-# 14 tree_acc 0.9416058
-# 15   ng_acc 0.9562044
-# 16    rpart 0.9197080
-# 17 tree_acc 0.9051095
-# 18   ng_acc 0.9270073
-# 19    rpart 0.9489051
-# 20 tree_acc 0.9635036
-# 21   ng_acc 0.9635036
-# 22    rpart 0.9270073
-# 23 tree_acc 0.9197080
-# 24   ng_acc 0.9489051
-# 25    rpart 0.9343066
-# 26 tree_acc 0.9708029
-# 27   ng_acc 0.9562044
-# 28    rpart 0.9635036
-# 29 tree_acc 0.9635036
-# 30   ng_acc 0.9781022
-# 31    rpart 0.9197080
-# 32 tree_acc 0.9416058
-# 33   ng_acc 0.9489051
-# 34    rpart 0.9489051
-# 35 tree_acc 0.9416058
-# 36   ng_acc 0.9708029
-# 37    rpart 0.9635036
-# 38 tree_acc 0.9562044
-# 39   ng_acc 0.9708029
-# 40    rpart 0.9489051
-# 41 tree_acc 0.9343066
-# 42   ng_acc 0.9635036
-# 43    rpart 0.9489051
-# 44 tree_acc 0.9635036
-# 45   ng_acc 0.9343066
-# 46    rpart 0.9270073
-# 47 tree_acc 0.9489051
-# 48   ng_acc 0.9635036
-# 49    rpart 0.9197080
-# 50 tree_acc 0.8978102
-# 51   ng_acc 0.9197080
-# 52    rpart 0.9489051
-# 53 tree_acc 0.9635036
-# 54   ng_acc 0.9562044
-# 55    rpart 0.9197080
-# 56 tree_acc 0.9343066
-# 57   ng_acc 0.9416058
-# 58    rpart 0.9562044
-# 59 tree_acc 0.9562044
-# 60   ng_acc 0.9343066
-
-# cancer columns(a,b,c,d,e,f)
-# rpart	0.9708029
-# tree	0.9635036
-# ng_cart	0.9854015
-# rpart	0.9124088
-# tree	0.9489051
-# ng_cart	0.9416058
-# rpart	0.9562044
-# tree	0.9562044
-# ng_cart	0.9708029
-# rpart	0.9562044
-# tree	0.9635036
-# ng_cart	0.9781022
