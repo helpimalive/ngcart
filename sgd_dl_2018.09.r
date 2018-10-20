@@ -389,15 +389,16 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ## https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/
 ## missing data dropped
 ###############
-# X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+#X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+#X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
-# X<-as.matrix(X)
-# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-# results<-rbind(results,c('greedy','non_greedy','rpart'))
-# results<-results[-1,]
-# which_cols<-c("a","b")
-# X<-X[,c(which_cols,"base")]
+X<-as.matrix(X)
+results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+results<-rbind(results,c('greedy','non_greedy','rpart'))
+results<-results[-1,]
+which_cols<-c("a","b","c","d","e","f","g")
+X<-X[,c(which_cols,"base")]
 
 #################
 ## IRIS		   ##
@@ -435,8 +436,8 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ##  BLOOD  ##
 #############
 # https://archive.ics.uci.edu/ml/machine-learning-databases/blood-transfusion/
-X<-read.csv('C:\\users\\mlarriva\\desktop\\blood.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-as.matrix(X)
+# X<-read.csv('C:\\users\\mlarriva\\desktop\\blood.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-as.matrix(X)
 
 results<-data.frame(method=character(),accuracy=double())
 which_cols<-c('a','b')
