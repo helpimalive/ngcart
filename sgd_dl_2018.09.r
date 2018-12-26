@@ -1,5 +1,8 @@
+# install.packages('gtools')
 library(gtools)
+# install.packages('rpart')
 library(rpart)
+# install.packages('tree')
 library(tree)
 
 ########################
@@ -391,14 +394,14 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ###############
 #X<-read.csv('C:\\users\\mlarriva\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 #X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
-X<-as.matrix(X)
-results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
-results<-rbind(results,c('greedy','non_greedy','rpart'))
-results<-results[-1,]
-which_cols<-c("a","b","c","d","e","f","g")
-X<-X[,c(which_cols,"base")]
+# X<-as.matrix(X)
+# results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
+# results<-rbind(results,c('greedy','non_greedy','rpart'))
+# results<-results[-1,]
+# which_cols<-c("a","b","c","d","e","f","g")
+# X<-X[,c(which_cols,"base")]
 
 #################
 ## IRIS		   ##
@@ -426,11 +429,12 @@ X<-X[,c(which_cols,"base")]
 #############
 # https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/
 # X<-read.csv('C:\\users\\mlarriva\\desktop\\haberman.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-as.matrix(X)
-
-# results<-data.frame(method=character(),accuracy=double())
-# which_cols<-c('a','b')
-# X[X['base']==2,4]<-0
+X<-read.csv('C:\\users\\Matt\\desktop\\haberman.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-as.matrix(X)
+results<-data.frame(method=character(),accuracy=double())
+which_cols<-c('a','b','c')
+X<-X[,c(which_cols,"base")]
+X[X['base']==2,4]<-0
 
 #############
 ##  BLOOD  ##
@@ -438,9 +442,9 @@ X<-X[,c(which_cols,"base")]
 # https://archive.ics.uci.edu/ml/machine-learning-databases/blood-transfusion/
 # X<-read.csv('C:\\users\\mlarriva\\desktop\\blood.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-as.matrix(X)
-
-results<-data.frame(method=character(),accuracy=double())
-which_cols<-c('a','b')
+# results<-data.frame(method=character(),accuracy=double())
+# which_cols<-c('a','b')
+# X<-X[,c(which_cols,"base")]
 
 depth<-0
 i<-0
