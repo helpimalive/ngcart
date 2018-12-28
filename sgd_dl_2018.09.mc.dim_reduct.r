@@ -442,7 +442,8 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 # which_cols<-c('a','b')
 
 
-test<-function(X,train_index,iterations=10,train_test_splits=1){
+test<-function(train_index,iterations=10,train_test_splits=1){
+	X<-read.csv('C:\\users\\matth\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 	X<-as.matrix(X)
 	results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
 	results<-rbind(results,c('greedy','non_greedy','rpart'))
@@ -476,8 +477,10 @@ test<-function(X,train_index,iterations=10,train_test_splits=1){
 		cat("\n","beginning greedy search")
 		out<-greedy(theta,W,tau,alpha,v,train_data)
 		while(it<iterations){
-			alpha<-alpha/2
-			out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
+			# alpha<-alpha/2
+			# out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
+			theta<-initialize_theta(train_data)
+			out<-greedy(theta,W,tau,alpha,v,train_data)
 			g_acc<- accuracy(out$theta,out$W,train_data)
 			if(g_acc>g_max_acc){
 					cat("\n","alpha=",1.0000*round(alpha,4),"accuracy=",1.0000*round(g_acc,2))
@@ -513,7 +516,7 @@ test<-function(X,train_index,iterations=10,train_test_splits=1){
 		for(try_v in vs){
 			cat("\n","trying normalizing scalar ",try_v)
 			out<-original_out
-			alpha<-0.1
+			alpha<-0.01
 			while(a_cycle<=iterations){
 
 				out<-non_greedy(out$theta,out$W,tau,alpha,try_v,train_data)
@@ -564,29 +567,28 @@ test<-function(X,train_index,iterations=10,train_test_splits=1){
 		results<-rbind(results,ng_acc)
 	}
 
-	aggregate(results,by=list(results$method),FUN=mean)
+	# aggregate(results,by=list(results$method),FUN=mean)
 	TukeyHSD(aov(accuracy~method,data=results))
+	# wilcox.test(results[results$method=='ng_acc',2],results[results$method=='tree_acc',2],paired=TRUE,alternative="greater")
+	# wilcox.test(results[results$method=='ng_acc',2],results[results$method=='rpart',2],paired=TRUE,alternative="greater")
 
-	wilcox.test(results[results$method=='ng_acc',2],results[results$method=='tree_acc',2],paired=TRUE,alternative="greater")
-	wilcox.test(results[results$method=='ng_acc',2],results[results$method=='rpart',2],paired=TRUE,alternative="greater")
-
-	return(results)
+	# return(results)
 }
 
 ############################################
 #### UNCOMMENT FOR MULTICORE PROCESSING ####
 ############################################
-# X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\matth\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\Matt\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\Matt\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
-# train_sets<-c()
-# for( i in seq(1,2)){
-# 	train_index<-sample(nrow(X),round(nrow(X)*0.80))
-# 	train_sets<-c(train_sets,train_index)
-# }
-train_index<-sample(nrow(X),round(nrow(X)*0.80))
-results = test(X,train_index,10,2)
-# library(parallel)
-# mclapply(train_sets,test,mc.cores=1)
+train_sets<-c()
+for( i in seq(1,20)){
+	train_index<-sample(nrow(X),round(nrow(X)*0.80))
+	train_sets<-c(train_sets,list(train_index))
+}
+# train_index<-sample(nrow(X),round(nrow(X)*0.80))
+# results = test(train_index)
+library(parallel)
+mclapply(train_sets,test,mc.cores=1)
 
