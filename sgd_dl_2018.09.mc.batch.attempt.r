@@ -1,7 +1,6 @@
 library(gtools)
 library(rpart)
 library(tree)
-library(tsne)
 
 ########################
 ### HELPER FUNCTIONS ###
@@ -48,7 +47,10 @@ sgn<-function(W,data,row){
 	# x is one row of the the innput matrix
 	# sgn is the m-bit m-bit vector of potential split decisions (h)
 	x = data[row,c(1:ncol(data)-1)]
-	out_mat = t(W) %*% x -1
+	if(length(row)==1){
+		x <-t(as.matrix(x))
+		}
+	out_mat = t(W) %*% t(x) -1
 	sign  = sign(out_mat)
 	return(sign)}
 
@@ -202,7 +204,7 @@ objective<-function(W,data,theta,samp_row,exhaustive){
 			g<-gs[row,]	
 			# if(!(list(f(g)) %in% memo)){ 		
 			x<-data[samp_row,c(1:ncol(data)-1)]
-			first_term = g %*% t(W) %*% x
+			# first_term = g %*% t(W) %*% x
 			u_p <-update_theta(theta)
 			second_term = loss(data,samp_row,u_p,g)
 			if(second_term<argmax){
@@ -237,9 +239,9 @@ objective_verbatum<-function(W,data,theta,samp_row){
 	for(row in c(1:nrow(gs))) {
 		g<-gs[row,]
 		# if(!(list(f(g)) %in% memo)){ 		
-			x<-data[samp_row,c(1:ncol(data)-1)]
+			x<-data[,c(1:ncol(data)-1)]
 			first_term = sum((sgn(W,data,samp_row) - g)^2)
-			first_term = g%*%t(W)%*%x
+			first_term = t(g)%*%t(W)%*%t(x)
 			u_p <-update_theta(theta)
 			second_term = loss(data,samp_row,u_p,g)
 			# cat("\n",first_term,second_term)
@@ -272,11 +274,11 @@ update_theta<-function(theta){
 		for (i in seq(1,nrow(theta))){
 			theta_vec<-theta[i,]
 			denominator<-do.call(sum,lapply(theta_vec,exp))
-			new_probs<-matrix(unlist(lapply(theta_vec, function(x) exp(x)/denominator)))
+			new_probs<-matrix(unlist(lapply(theta_vec, function(a) exp(a)/denominator)))
 			theta[i,]<-new_probs}
 			} else {
 			denominator<-do.call(sum,lapply(theta,exp))
-			theta<-matrix(unlist(lapply(theta, function(x) exp(x)/denominator)))	
+			theta<-matrix(unlist(lapply(theta, function(a) exp(a)/denominator)))	
 			}
 	return(theta)
 }
@@ -284,14 +286,14 @@ update_theta<-function(theta){
 greedy<-function(theta,W,tau,alpha,v,train_data,exhaustive){
 	cols<-dim(train_data)[2]-1
 	for(t in seq(1,tau)){
-		# samp_row <-sample(1:nrow(train_data),1)
+		# samp_row <-sample(1:nrow(train_data),round(0.05*nrow(train_data)))
 		samp_row<-t
 		
 		# current path
 		h = sgn(W,train_data,samp_row) 
 		# optimal path based on cost function (not on the other term)
 		g = objective(W,train_data,theta,samp_row,exhaustive)
-		W = W + t((alpha*(g-h)%*%t(train_data[samp_row,0:cols])))
+		W = W + t((alpha*(g-h)%*%(train_data[samp_row,0:cols])))
 
 		for(i in seq(1,nrow(W))) {
 			a = min(1, v**(1/2) / (sum(W[i,]**2)**(1/2))) %*% W[i,]
@@ -301,9 +303,10 @@ greedy<-function(theta,W,tau,alpha,v,train_data,exhaustive){
 		h = sgn(W,train_data,samp_row) 
 		# if(all(g==h)){
 		true_base = as.numeric(train_data[samp_row,ncol(train_data)])
-		r<-grep(1,f(sgn(W,train_data,samp_row)))
+		map<-(rowMeans(apply(sgn(W,train_data,samp_row),2,f)))
+		r<-grep(max(map),map)
 		probs<-theta[r,]
-
+		true_base<-round(mean(true_base))
 		if (true_base==1){
 			true_probs<-c(0,1)
 			} else {
@@ -312,6 +315,7 @@ greedy<-function(theta,W,tau,alpha,v,train_data,exhaustive){
 
 		# Gradient Version with Partial Derivative
 		gradient = loss_prime(probs)
+		
 		theta[r,] = theta[r,] - alpha * (update_theta(t(gradient))*(theta[r,]-true_probs))
 		theta[is.nan(theta)]=0.01
 		# }
@@ -441,41 +445,36 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 # X<-as.matrix(X)
 # which_cols<-c('a','b')
 
-library('NMF')
-test<-function(X,train_index,iterations=10,train_test_splits=1){
+
+test<-function(train_index){
+	# X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	X<-read.csv('C:\\Users\\Matt\\Documents\\GitHub\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	# X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 	X<-as.matrix(X)
 	results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
 	results<-rbind(results,c('greedy','non_greedy','rpart'))
 	results<-results[-1,]
-
-	train_data<-X[train_index,]
-	# PCA
-	# pc_train<-prcomp(x=train_data[,colnames(train_data)!='base'],center=FALSE,scale=FALSE,rank=4)
-	# train_data<-cbind(pc_train$x,train_data[,'base'])
-	# colnames(train_data)<-c(1,2,3,4,'base')
-	
-	# NMF
-	pc_train<-nmf(train_data,round(sqrt(dim(train_data)[2])))
-
-	test_data<-X[-train_index,]
-	pc_test <- prcomp(x=test_data[,colnames(test_data)!='base'],center=FALSE,scale=FALSE,rank=4)
-	test_data<-cbind(pc_test$x,test_data[,'base'])
-	colnames(test_data)<-c(1,2,3,4,'base')
-
-
-
-
+	which_cols<-c("a","b","c","d","e","f","g")
+	which_cols<-c("a","b","c")
+	X<-X[,c(which_cols,"base")]
+	results<-data.frame(method=character(),accuracy=double())
 	depth<-0
 	i<-0
-	while(i<ncol(train_data)-1){
+	while(i<ncol(X)-1){
 		depth =depth+2**i
 		i=i+1
 	}
 
-	for(split in seq(1,train_test_splits)){
+	for(case in seq(1,1)){
+		
+		test_data<-X[-train_index,]
+		train_data<-X[train_index,]
+
 		i_weights<-apply(train_data[,1:(ncol(train_data)-1)],2,sd)
-		W<-matrix(rep(c(i_weights),depth),nrow=dim(train_data)[2]-1,ncol=depth,byrow=F)
+		W<-matrix(rep(c(i_weights),depth),nrow=dim(X)[2]-1,ncol=depth,byrow=F)
+
 		theta<-initialize_theta(train_data)
+
 		alpha<-0.1
 		tau = dim(train_data)[1]
 		v<-mean(W)
@@ -485,12 +484,12 @@ test<-function(X,train_index,iterations=10,train_test_splits=1){
 		g_max_theta<-0
 		g_max_w<-0
 
-		cat("\n","beginning greedy search")
 		out<-greedy(theta,W,tau,alpha,v,train_data)
-		while(it<iterations){
+		while(it<10){
 			alpha<-alpha/2
 			out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
 			g_acc<- accuracy(out$theta,out$W,train_data)
+			cat("\n","alpha=",1.0000*round(alpha,4),"accuracy=",1.0000*round(g_acc,2))
 			if(g_acc>g_max_acc){
 					cat("\n","alpha=",1.0000*round(alpha,4),"accuracy=",1.0000*round(g_acc,2))
 					g_max_theta<-out$theta
@@ -503,12 +502,13 @@ test<-function(X,train_index,iterations=10,train_test_splits=1){
 
 		out<-greedy(g_max_theta,g_max_w,tau,g_max_alpha,v,train_data)
 		g_acc_1<- accuracy(g_max_theta,g_max_w,train_data)
-		cat("\n","best greedy parameters found:")
 		cat("\n","alpha=",1.0000*round(g_max_alpha,4),"accuracy=",1.0000*round(g_acc_1,2))
 		
 		a_cycle<-0
 		ng_acc<-0
 		ng_acc_max<-g_acc_1
+		# ng_acc_max_theta<-out$theta
+		# ng_acc_max_W<-out$W
 		ng_acc_max_theta<-g_max_theta
 		ng_acc_max_W<-g_max_w
 		ng_min_alpha<-alpha
@@ -518,27 +518,33 @@ test<-function(X,train_index,iterations=10,train_test_splits=1){
 			v<-0.1
 		}
 		vs<-c(v,v2)
-
-		cat("\n","beginning non-greedy optimization")
+		# vs<-c(v)
+		# THIS LINE BEATS BANKNOTES
+		# vs<-c(v)
+		# THIS LINE BEATS CANCER
+		# vs<-c(v2)
 		original_out<-out
-		i=0
 		for(try_v in vs){
-			cat("\n","trying normalizing scalar ",try_v)
 			out<-original_out
+			## I FORGOT THIS LINE BUT IT NEEDS TO BE IN AND RERUN FOR BANKNOTES AND CANCER
+			## USUALLY 0.1 but changed for iris
 			alpha<-0.1
-			while(a_cycle<=iterations){
+			while(a_cycle<=10){
 
 				out<-non_greedy(out$theta,out$W,tau,alpha,try_v,train_data)
 				ng_acc<- accuracy(out$theta,out$W,train_data)
 				cat("\n",
-					"cycle:",a_cycle," of ",iterations,
 					"alpha=",1.0000*round(alpha,4),
 					"v=",1.0000*round(try_v,2),
 					"g_acc=",1.0000*round(g_acc_1,2),
 					"ng_acc=",1.0000*round(ng_acc,2)
+					# "rpart=",1.0000*round(rpart,2),
+					# ng_acc>=rpart
 					)
 
 				 if(ng_acc>=ng_acc_max ){
+					cat("\n","saving this^ as best")
+					# out<-non_greedy(out$theta,out$W,tau,alpha,try_v,rbind(validate_data,train_data))
 					ng_acc_max_theta<-out$theta
 					ng_acc_max_W<-out$W
 					ng_acc_max<-ng_acc
@@ -547,54 +553,42 @@ test<-function(X,train_index,iterations=10,train_test_splits=1){
 				
 				alpha<-alpha/2
 				a_cycle=a_cycle+1
-			}
-			a_cycle=0
+				}
+				a_cycle=0
 		}
 
-		non_pc_train_data<-X[train_index,]
-		non_pc_test_data<-X[-train_index,]
-
-		rpart<-rpart_pred(non_pc_train_data,non_pc_test_data,
-			colnames(non_pc_train_data)[colnames(non_pc_train_data)!='base'])
-		cat("\n ","rpart_acc=",rpart)
+		rpart<-rpart_pred(train_data,test_data,which_cols)
+		cat("\n ",rpart)
 		rpart<-data.frame(method="rpart", accuracy=rpart)
 		results<-rbind(results,rpart)
-
-		tree_acc<-tree_test(non_pc_train_data,non_pc_test_data,
-			colnames(non_pc_train_data)[colnames(non_pc_train_data)!='base'])
-		cat("\n ","tree_acc=",tree_acc)
+		tree_acc<-tree_test(train_data,test_data,which_cols)
+		cat("\n ",tree_acc)
 		tree_acc<-data.frame(method="tree_acc", accuracy=as.numeric(tree_acc))
 		results<-rbind(results,tree_acc)
-
 		ng_acc<-accuracy(ng_acc_max_theta,ng_acc_max_W,test_data)
 		cat("\n ","ng_acc = ",ng_acc)
 		ng_acc<-data.frame(method="ng_acc", accuracy=ng_acc)
 		results<-rbind(results,ng_acc)
+		
 	}
 
-	aggregate(results,by=list(results$method),FUN=mean)
+	aggregate(results,list(results$method),mean)
+	summary(aov(accuracy~method,data=results))
+
+	summary(aov(accuracy~method,data=results))
 	TukeyHSD(aov(accuracy~method,data=results))
 
 	wilcox.test(results[results$method=='ng_acc',2],results[results$method=='tree_acc',2],paired=TRUE,alternative="greater")
 	wilcox.test(results[results$method=='ng_acc',2],results[results$method=='rpart',2],paired=TRUE,alternative="greater")
-
-	return(results)
 }
 
-############################################
-#### UNCOMMENT FOR MULTICORE PROCESSING ####
-############################################
 # X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-# X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\Matt\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-
-# train_sets<-c()
-# for( i in seq(1,2)){
-# 	train_index<-sample(nrow(X),round(nrow(X)*0.80))
-# 	train_sets<-c(train_sets,train_index)
-# }
-train_index<-sample(nrow(X),round(nrow(X)*0.80))
-results = test(X,train_index,1,2)
-# library(parallel)
-# mclapply(train_sets,test,mc.cores=1)
+X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+train_sets<-c()
+for( i in seq(1,20)){
+	train_index<-list(sample(nrow(X),round(nrow(X)*0.80)))
+	train_sets<-c(train_sets,train_index)
+}
+library(parallel)
+mclapply(train_sets,test,mc.cores=8)
 
