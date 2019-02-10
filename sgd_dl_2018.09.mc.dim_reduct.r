@@ -441,18 +441,27 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 # X<-as.matrix(X)
 # which_cols<-c('a','b')
 
-
+library(randomForest)
 test<-function(train_index,iterations=10,train_test_splits=1){
-	X<-read.csv('C:\\users\\matth\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	# X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	X<-read.csv('C:\\users\\matt\\Documents\\Academic and Professional\\UCLA\\thesis\\default of credit card clients.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 	X<-as.matrix(X)
 	results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
 	results<-rbind(results,c('greedy','non_greedy','rpart'))
 	results<-results[-1,]
 
 	train_data<-X[train_index,]
-	pc_train<-prcomp(x=train_data[,colnames(train_data)!='base'],center=FALSE,scale=FALSE,rank=4)
-	train_data<-cbind(pc_train$x,train_data[,'base'])
-	colnames(train_data)<-c(1,2,3,4,'base')
+	# pc_train<-prcomp(x=train_data[,colnames(train_data)!='base'],center=FALSE,scale=FALSE,rank=4)
+
+	rf_X<-X
+	rf_X<-as.data.frame(rf_X)
+	rf<-randomForest(base~., data=rf_X)
+	var_sort<-importance(rf)
+	vars<- rownames(var_sort)[var_sort>=sort(var_sort,decreasing=TRUE)[3]]
+	pc_train<-X[train_index,vars]
+	
+	train_data<-cbind(pc_train,train_data[,'base'])
+	colnames(train_data)<-c(1,2,3,'base')
 
 	depth<-0
 	i<-0
@@ -558,13 +567,29 @@ test<-function(train_index,iterations=10,train_test_splits=1){
 		results<-rbind(results,tree_acc)
 
 		test_data<-X[-train_index,]
-		pc_test <- prcomp(x=test_data[,colnames(test_data)!='base'],center=FALSE,scale=FALSE,rank=4)
-		test_data<-cbind(pc_test$x,test_data[,'base'])
-		colnames(test_data)<-c(1,2,3,4,'base')
+		pc_test<-X[-train_index,vars]
+		test_data<-cbind(pc_test,test_data[,'base'])
+		colnames(test_data)<-c(1,2,3,'base')
+
 		ng_acc<-accuracy(ng_acc_max_theta,ng_acc_max_W,test_data)
 		cat("\n ","ng_acc = ",ng_acc)
 		ng_acc<-data.frame(method="ng_acc", accuracy=ng_acc)
 		results<-rbind(results,ng_acc)
+
+		colnames(test_data)<-c('a','b','c','base')
+		pc_train_II<- cbind(pc_train,train_data[,'base'])
+		colnames(pc_train_II)<-c('a','b','c','base')
+		rpart<-rpart_pred(pc_train_II,test_data,
+			colnames(pc_train_II)[colnames(pc_train_II)!='base'])
+		cat("\n ","non_pc_rpart_acc=",rpart)
+		rpart<-data.frame(method="non_pc_rpart", accuracy=rpart)
+		results<-rbind(results,rpart)
+
+		tree_acc<-tree_test(pc_train_II,test_data,
+			colnames(pc_train_II)[colnames(pc_train_II)!='base'])
+		cat("\n ","non_pc_tree_acc=",tree_acc)
+		tree_acc<-data.frame(method="non_pc_tree", accuracy=as.numeric(tree_acc))
+		results<-rbind(results,tree_acc)
 	}
 
 	# aggregate(results,by=list(results$method),FUN=mean)
@@ -578,7 +603,9 @@ test<-function(train_index,iterations=10,train_test_splits=1){
 ############################################
 #### UNCOMMENT FOR MULTICORE PROCESSING ####
 ############################################
-X<-read.csv('C:\\users\\matth\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\matth\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\matt\\Documents\\Academic and Professional\\UCLA\\thesis\\default of credit card clients.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\Matt\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
