@@ -372,7 +372,7 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 ##BANKNOTES##
 #############
 # https://archive.ics.uci.edu/ml/datasets/banknote+authentication
-# X<-read.csv('C:\\users\\matth\\Documents\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\mlarriva\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\Matt\\desktop\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-as.matrix(X)
@@ -441,27 +441,67 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 # X<-as.matrix(X)
 # which_cols<-c('a','b')
 
+#############
+## DEFAULT ##
+#############
+#http://archive.ics.uci.edu/ml/machine-learning-databases/00350/
+
+#############
+##  Audit  ##
+#############
+# https://archive.ics.uci.edu/ml/datasets/Audit+Data
+
 library(randomForest)
+library(standardize)
 test<-function(train_index,iterations=10,train_test_splits=1){
 	# X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-	X<-read.csv('C:\\users\\matt\\Documents\\Academic and Professional\\UCLA\\thesis\\default of credit card clients.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	# X<-read.csv('C:\\users\\matt\\Documents\\Academic and Professional\\UCLA\\thesis\\default of credit card clients small.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\fertility.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 	X<-as.matrix(X)
+	X<-na.omit(X,how='any')
+	X<-as.data.frame(X)
+	X = as.matrix(as.data.frame(lapply(X, as.numeric)))
+	X = as.data.frame(X)
+
 	results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
 	results<-rbind(results,c('greedy','non_greedy','rpart'))
 	results<-results[-1,]
 
 	train_data<-X[train_index,]
-	# pc_train<-prcomp(x=train_data[,colnames(train_data)!='base'],center=FALSE,scale=FALSE,rank=4)
+	train_data<-as.data.frame(train_data)
+	#####
+	## NORMALIZE
+	####
+	# train_data[,colnames(train_data)!='base']<-scale(train_data[,colnames(train_data)!='base'])
+	# train_data<-as.data.frame(train_data)
+	# train_data$base<-train_data$base-1
+	train_data$base<-as.factor(train_data$base)
 
-	rf_X<-X
-	rf_X<-as.data.frame(rf_X)
-	rf<-randomForest(base~., data=rf_X)
+	rf<-randomForest(base~., data=train_data)
 	var_sort<-importance(rf)
 	vars<- rownames(var_sort)[var_sort>=sort(var_sort,decreasing=TRUE)[3]]
-	pc_train<-X[train_index,vars]
-	
+	pc_train<-train_data[,vars]
 	train_data<-cbind(pc_train,train_data[,'base'])
 	colnames(train_data)<-c(1,2,3,'base')
+	train_data<-data.matrix(train_data)
+	train_data[,'base']<-train_data[,'base']-1
+
+
+
+
+	#####
+	## NON NORMALIZED
+	#####
+	# rf_X<-X[train_index,]
+	# rf_X<-as.data.frame(rf_X)
+	# rf<-randomForest(base~., data=rf_X)
+	# var_sort<-importance(rf)
+	# vars<- rownames(var_sort)[var_sort>=sort(var_sort,decreasing=TRUE)[3]]
+	# pc_train<-X[train_index,vars]
+	
+	# train_data<-cbind(pc_train,train_data[,'base'])
+	# colnames(train_data)<-c(1,2,3,'base')
+	###### END NON NORM #######
 
 	depth<-0
 	i<-0
@@ -566,10 +606,14 @@ test<-function(train_index,iterations=10,train_test_splits=1){
 		tree_acc<-data.frame(method="tree_acc", accuracy=as.numeric(tree_acc))
 		results<-rbind(results,tree_acc)
 
+		### USE IF NORMALIZED WAS NOT USED
 		test_data<-X[-train_index,]
 		pc_test<-X[-train_index,vars]
 		test_data<-cbind(pc_test,test_data[,'base'])
 		colnames(test_data)<-c(1,2,3,'base')
+		test_data<-as.matrix(test_data)
+		### END USE
+
 
 		ng_acc<-accuracy(ng_acc_max_theta,ng_acc_max_W,test_data)
 		cat("\n ","ng_acc = ",ng_acc)
@@ -579,6 +623,7 @@ test<-function(train_index,iterations=10,train_test_splits=1){
 		colnames(test_data)<-c('a','b','c','base')
 		pc_train_II<- cbind(pc_train,train_data[,'base'])
 		colnames(pc_train_II)<-c('a','b','c','base')
+
 		rpart<-rpart_pred(pc_train_II,test_data,
 			colnames(pc_train_II)[colnames(pc_train_II)!='base'])
 		cat("\n ","non_pc_rpart_acc=",rpart)
@@ -605,7 +650,8 @@ test<-function(train_index,iterations=10,train_test_splits=1){
 ############################################
 # X<-read.csv('C:\\users\\matth\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('C:\\users\\matt\\Documents\\Academic and Professional\\UCLA\\thesis\\default of credit card clients.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('C:\\users\\matt\\Documents\\Academic and Professional\\UCLA\\thesis\\default of credit card clients small.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\fertility.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 # X<-read.csv('C:\\users\\Matt\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 
@@ -618,4 +664,5 @@ for( i in seq(1,20)){
 # results = test(train_index)
 library(parallel)
 mclapply(train_sets,test,mc.cores=1)
+
 

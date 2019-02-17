@@ -443,12 +443,13 @@ non_greedy<-function(theta,W,tau,alpha,v,train_data){
 
 test<-function(train_index){
 	# X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-	X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	# X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+	X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 	X<-as.matrix(X)
 	results<-data.frame(greedy_acc=double(),ng_acc=double(),rpart=double())
 	results<-rbind(results,c('greedy','non_greedy','rpart'))
 	results<-results[-1,]
-	which_cols<-c("a","b","c","d","e","f","g")
+	which_cols<-c("a","b")
 	# which_cols<-c("a","b","c")
 	X<-X[,c(which_cols,"base")]
 	results<-data.frame(method=character(),accuracy=double())
@@ -485,7 +486,7 @@ test<-function(train_index){
 			out<-greedy(out$theta,out$W,tau,alpha,v,train_data)
 			g_acc<- accuracy(out$theta,out$W,train_data)
 			if(g_acc>g_max_acc){
-					cat("\n","alpha=",1.0000*round(alpha,4),"accuracy=",1.0000*round(g_acc,2))
+					# cat("\n","alpha=",1.0000*round(alpha,4),"accuracy=",1.0000*round(g_acc,2))
 					g_max_theta<-out$theta
 					g_max_w<-out$W
 					g_max_acc<-g_acc
@@ -496,7 +497,7 @@ test<-function(train_index){
 
 		out<-greedy(g_max_theta,g_max_w,tau,g_max_alpha,v,train_data)
 		g_acc_1<- accuracy(g_max_theta,g_max_w,train_data)
-		cat("\n","alpha=",1.0000*round(g_max_alpha,4),"accuracy=",1.0000*round(g_acc_1,2))
+		# cat("\n","alpha=",1.0000*round(g_max_alpha,4),"accuracy=",1.0000*round(g_acc_1,2))
 		
 		a_cycle<-0
 		ng_acc<-0
@@ -527,17 +528,17 @@ test<-function(train_index){
 
 				out<-non_greedy(out$theta,out$W,tau,alpha,try_v,train_data)
 				ng_acc<- accuracy(out$theta,out$W,train_data)
-				cat("\n",
-					"alpha=",1.0000*round(alpha,4),
-					"v=",1.0000*round(try_v,2),
-					"g_acc=",1.0000*round(g_acc_1,2),
-					"ng_acc=",1.0000*round(ng_acc,2)
+				# cat("\n",
+				# 	"alpha=",1.0000*round(alpha,4),
+				# 	"v=",1.0000*round(try_v,2),
+				# 	"g_acc=",1.0000*round(g_acc_1,2),
+				# 	"ng_acc=",1.0000*round(ng_acc,2)
 					# "rpart=",1.0000*round(rpart,2),
 					# ng_acc>=rpart
-					)
+					# )
 
 				 if(ng_acc>=ng_acc_max ){
-					cat("\n","saving this^ as best")
+					# cat("\n","saving this^ as best")
 					# out<-non_greedy(out$theta,out$W,tau,alpha,try_v,rbind(validate_data,train_data))
 					ng_acc_max_theta<-out$theta
 					ng_acc_max_W<-out$W
@@ -552,11 +553,11 @@ test<-function(train_index){
 		}
 
 		rpart<-rpart_pred(train_data,test_data,which_cols)
-		cat("\n ",rpart)
+		cat("\n ","rpart acc=",rpart)
 		rpart<-data.frame(method="rpart", accuracy=rpart)
 		results<-rbind(results,rpart)
 		tree_acc<-tree_test(train_data,test_data,which_cols)
-		cat("\n ",tree_acc)
+		cat("\n ","tree_acc=",tree_acc)
 		tree_acc<-data.frame(method="tree_acc", accuracy=as.numeric(tree_acc))
 		results<-rbind(results,tree_acc)
 		ng_acc<-accuracy(ng_acc_max_theta,ng_acc_max_W,test_data)
@@ -577,12 +578,13 @@ test<-function(train_index){
 }
 
 # X<-read.csv('C:\\users\\matth\\desktop\\cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
-X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+# X<-read.csv('cancer_data.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
+X<-read.csv('C:\\users\\matt\\documents\\github\\ngcart\\banknotes.csv',header=TRUE,sep=",",stringsAsFactors=F, dec=".")
 train_sets<-c()
 for( i in seq(1,20)){
 	train_index<-list(sample(nrow(X),round(nrow(X)*0.80)))
 	train_sets<-c(train_sets,train_index)
 }
 library(parallel)
-mclapply(train_sets,test,mc.cores=8)
+mclapply(train_sets,test,mc.cores=1)
 
